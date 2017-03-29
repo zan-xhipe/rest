@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -91,11 +90,11 @@ func useService() error {
 	err = db.Update(func(tx *bolt.Tx) error {
 		serviceBucket := tx.Bucket([]byte("services"))
 		if serviceBucket == nil {
-			return errors.New("database malformed, no services bucket")
+			return ErrNoServicesBucket
 		}
 
 		if b := serviceBucket.Bucket([]byte(*serviceToUse)); b == nil {
-			return fmt.Errorf("no service: %s", *serviceToUse)
+			return ErrNoService{Name: *serviceToUse}
 		}
 
 		info, err := tx.CreateBucketIfNotExists([]byte("info"))
@@ -185,22 +184,22 @@ func getValues() (*url.URL, error) {
 	err = db.View(func(tx *bolt.Tx) error {
 		info := tx.Bucket([]byte("info"))
 		if info == nil {
-			return errors.New("malformed database, no info bucket")
+			return ErrNoInfoBucket
 		}
 
 		current := info.Get([]byte("current"))
 		if current == nil {
-			return errors.New("no current database set")
+			return ErrNoServiceSet
 		}
 
 		serviceBucket := tx.Bucket([]byte("services"))
 		if serviceBucket == nil {
-			return errors.New("malformed database, no services bucket")
+			return ErrNoServicesBucket
 		}
 
 		b := serviceBucket.Bucket(current)
 		if b == nil {
-			return errors.New("no service bucket")
+			return ErrNoService{Name: string(current)}
 		}
 
 		u.Scheme = string(b.Get([]byte("scheme")))
