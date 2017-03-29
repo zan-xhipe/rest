@@ -30,6 +30,9 @@ var (
 	use          = kingpin.Command("use", "switch service")
 	serviceToUse = use.Arg("service", "the service to use").Required().String()
 
+	config        = kingpin.Command("config", "show and alter service configs")
+	configService = config.Arg("service", "service to display").String()
+
 	get     = kingpin.Command("get", "Perform a GET request")
 	getPath = get.Arg("url", "url to perform request on").Required().String()
 
@@ -68,6 +71,12 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+	case "config":
+		if err := displayConfig(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
 	case "get", "post", "put", "delete":
 		resp, err := makeRequest(command)
 		if err != nil {
@@ -77,6 +86,46 @@ func main() {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		fmt.Print(string(body))
+	}
+}
+
+func displayConfig() error {
+	db, err := bolt.Open(dbFile, 0600, nil)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	err = db.View(func(tx *bolt.Tx) error {
+		if *configService == "" {
+			info := tx.Bucket([]byte("info")).Cursor()
+			for k, v := info.First(); k != nil; k, v = info.Next() {
+				fmt.Printf("%s: %s\n", k, v)
+			}
+
+			serv := tx.Bucket([]byte("services"))
+			c := serv.Cursor()
+
+			for s, _ := c.First(); s != nil; s, _ = c.Next() {
+				displayService(serv, s)
+			}
+
+			return nil
+		}
+
+		displayService(tx.Bucket([]byte("services")), []byte(*configService))
+
+		return nil
+	})
+
+	return err
+}
+
+func displayService(b *bolt.Bucket, service []byte) {
+	fmt.Printf("%s:\n", service)
+	c := b.Bucket(service).Cursor()
+	for k, v := c.First(); k != nil; k, v = c.Next() {
+		fmt.Printf("	%s: %s\n", k, v)
 	}
 }
 
