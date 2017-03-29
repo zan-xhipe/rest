@@ -26,6 +26,7 @@ var (
 	setHost    = set.Flag("host", "hostname for the servicpe").String()
 	setPort    = set.Flag("port", "port to access the service").Int()
 	setScheme  = set.Flag("scheme", "scheme used to access the service eg. http, https").String()
+	setHeaders = set.Flag("header", "header to set for each request").StringMap()
 
 	use          = kingpin.Command("use", "switch service")
 	serviceToUse = use.Arg("service", "the service to use").Required().String()
@@ -107,7 +108,9 @@ func displayConfig() error {
 		case *configValue == "":
 			displayServiceKey(tx, *configService, *configKey)
 		default:
-			setConfig(tx, *configService, *configKey, *configValue)
+			if err := setConfig(tx, *configService, *configKey, *configValue); err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -126,7 +129,9 @@ func displayAllServices(tx *bolt.Tx) {
 	c := serv.Cursor()
 
 	for s, _ := c.First(); s != nil; s, _ = c.Next() {
-		displayService(serv, s)
+		fmt.Printf("%s:\n", string(s))
+		b := serv.Bucket(s)
+		printBucket(b, 1)
 	}
 }
 
@@ -214,6 +219,18 @@ func setValues() error {
 			return err
 		}
 
+		for header, value := range *setHeaders {
+			h, err := b.CreateBucketIfNotExists([]byte("headers"))
+			if err != nil {
+				return err
+			}
+
+			if err := h.Put([]byte(header), []byte(value)); err != nil {
+				return err
+			}
+
+		}
+
 		// if this is the first service to be set then set then also make it current service
 		if info := tx.Bucket([]byte("info")); info == nil {
 			ib, err := tx.CreateBucket([]byte("info"))
@@ -260,14 +277,15 @@ func setInt(b *bolt.Bucket, key string, value *int, defaultValue int) error {
 	return b.Put([]byte(key), buf)
 }
 
-func getValues() (*url.URL, error) {
+func getValues() (*url.URL, map[string]string, error) {
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer db.Close()
 
 	u := &url.URL{}
+	headers := make(map[string]string)
 	err = db.View(func(tx *bolt.Tx) error {
 		info := tx.Bucket([]byte("info"))
 		if info == nil {
@@ -297,14 +315,21 @@ func getValues() (*url.URL, error) {
 		}
 		u.Host = fmt.Sprintf("%s:%d", hostname, port)
 
+		if h := b.Bucket([]byte("headers")); h != nil {
+			c := h.Cursor()
+			for k, v := c.First(); k != nil; k, v = c.Next() {
+				headers[string(k)] = string(v)
+			}
+		}
+
 		return nil
 	})
 
-	return u, err
+	return u, nil, err
 }
 
 func makeRequest(reqType string) (*http.Response, error) {
-	u, err := getValues()
+	u, headers, err := getValues()
 	if err != nil {
 		return nil, err
 	}
@@ -317,6 +342,10 @@ func makeRequest(reqType string) (*http.Response, error) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest(strings.ToUpper(reqType), u.String(), data())
+
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
 
 	if err != nil {
 		return nil, err
