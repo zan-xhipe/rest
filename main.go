@@ -249,34 +249,6 @@ func setValues() error {
 	return err
 }
 
-func setString(b *bolt.Bucket, key string, value *string, defaultValue string) error {
-	var v string
-	switch {
-	case value == nil:
-		v = defaultValue
-	case *value == "":
-		v = defaultValue
-	default:
-		v = *value
-	}
-
-	return b.Put([]byte(key), []byte(v))
-}
-
-func setInt(b *bolt.Bucket, key string, value *int, defaultValue int) error {
-	var v int
-	switch {
-	case value == nil:
-		v = defaultValue
-	default:
-		v = *value
-	}
-
-	buf := make([]byte, 4)
-	binary.PutVarint(buf, int64(v))
-	return b.Put([]byte(key), buf)
-}
-
 func getValues() (*url.URL, map[string]string, error) {
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {

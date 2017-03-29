@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
 
@@ -17,6 +18,33 @@ func printBucket(b *bolt.Bucket, level int) {
 		} else {
 			fmt.Printf("%s%s: %s\n", padding, key, value)
 		}
-
 	}
+}
+
+func setString(b *bolt.Bucket, key string, value *string, defaultValue string) error {
+	var v string
+	switch {
+	case value == nil:
+		v = defaultValue
+	case *value == "":
+		v = defaultValue
+	default:
+		v = *value
+	}
+
+	return b.Put([]byte(key), []byte(v))
+}
+
+func setInt(b *bolt.Bucket, key string, value *int, defaultValue int) error {
+	var v int
+	switch {
+	case value == nil:
+		v = defaultValue
+	default:
+		v = *value
+	}
+
+	buf := make([]byte, 4)
+	binary.PutVarint(buf, int64(v))
+	return b.Put([]byte(key), buf)
 }
