@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/boltdb/bolt"
+	homedir "github.com/mitchellh/go-homedir"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
@@ -21,10 +22,14 @@ import (
 var (
 	verbose = kingpin.Flag("verbose", "Verbose mode").Short('v').Bool()
 
-	set       = kingpin.Command("set", "initialise rest session")
-	setHost   = set.Flag("host", "hostname for the service").String()
-	setPort   = set.Flag("port", "port to access the service").Int()
-	setScheme = set.Flag("scheme", "scheme used to access the service eg. http, https").String()
+	set        = kingpin.Command("set", "initialise rest session")
+	setService = set.Arg("service", "the service to set values for").Required().String()
+	setHost    = set.Flag("host", "hostname for the servicpe").String()
+	setPort    = set.Flag("port", "port to access the service").Int()
+	setScheme  = set.Flag("scheme", "scheme used to access the service eg. http, https").String()
+
+	use          = kingpin.Command("use", "switch service")
+	serviceToUse = use.Arg("service", "the service to use").Required().String()
 
 	get     = kingpin.Command("get", "Perform a GET request")
 	getPath = get.Arg("url", "url to perform request on").Required().String()
@@ -39,13 +44,28 @@ var (
 
 	delete     = kingpin.Command("delete", "Performa DELETE request")
 	deletePath = delete.Arg("url", "url to perform request on").Required().String()
+
+	dbFile string
 )
+
+func init() {
+	dir, err := homedir.Dir()
+	if err != nil {
+		panic(err)
+	}
+	dbFile = fmt.Sprintf("%s/%s", dir, ".rest.db")
+}
 
 func main() {
 	command := kingpin.Parse()
 	switch command {
 	case "set":
 		if err := setValues(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	case "use":
+		if err := useService(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
@@ -61,23 +81,57 @@ func main() {
 	}
 }
 
+func useService() error {
+	db, err := bolt.Open(dbFile, 0600, nil)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	err = db.Update(func(tx *bolt.Tx) error {
+		serviceBucket := tx.Bucket([]byte("services"))
+		if serviceBucket == nil {
+			return errors.New("database malformed, no services bucket")
+		}
+
+		if b := serviceBucket.Bucket([]byte(*serviceToUse)); b == nil {
+			return fmt.Errorf("no service: %s", *serviceToUse)
+		}
+
+		info, err := tx.CreateBucketIfNotExists([]byte("info"))
+		if err != nil {
+			return err
+		}
+
+		err = info.Put([]byte("current"), []byte(*serviceToUse))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return err
+}
+
 func setValues() error {
 	if *verbose {
 		fmt.Println("opening database", ".rest.db")
 	}
 
-	db, err := bolt.Open(".rest.db", 0600, nil)
+	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			fmt.Println(err)
-		}
-	}()
+	defer db.Close()
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte("service"))
+		serviceBucket, err := tx.CreateBucketIfNotExists([]byte("services"))
+		if err != nil {
+			return err
+		}
+
+		b, err := serviceBucket.CreateBucketIfNotExists([]byte(*setService))
 		if err != nil {
 			return err
 		}
@@ -102,6 +156,18 @@ func setValues() error {
 			}
 		}
 
+		// if this is the first service to be set then set then also make it current service
+		if info := tx.Bucket([]byte("info")); info == nil {
+			ib, err := tx.CreateBucket([]byte("info"))
+			if err != nil {
+				return err
+			}
+
+			if err := ib.Put([]byte("current"), []byte(*setService)); err != nil {
+				return err
+			}
+		}
+
 		return nil
 	})
 
@@ -109,7 +175,7 @@ func setValues() error {
 }
 
 func getValues() (*url.URL, error) {
-	db, err := bolt.Open(".rest.db", 0600, nil)
+	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +183,22 @@ func getValues() (*url.URL, error) {
 
 	u := &url.URL{}
 	err = db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("service"))
+		info := tx.Bucket([]byte("info"))
+		if info == nil {
+			return errors.New("malformed database, no info bucket")
+		}
+
+		current := info.Get([]byte("current"))
+		if current == nil {
+			return errors.New("no current database set")
+		}
+
+		serviceBucket := tx.Bucket([]byte("services"))
+		if serviceBucket == nil {
+			return errors.New("malformed database, no services bucket")
+		}
+
+		b := serviceBucket.Bucket(current)
 		if b == nil {
 			return errors.New("no service bucket")
 		}
@@ -150,6 +231,7 @@ func makeRequest(reqType string) (*http.Response, error) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest(strings.ToUpper(reqType), u.String(), data())
+
 	if err != nil {
 		return nil, err
 	}
