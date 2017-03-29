@@ -102,9 +102,10 @@ func displayConfig() error {
 	err = db.Update(func(tx *bolt.Tx) error {
 		switch {
 		case *configService == "":
-			displayAllServices(tx)
+			printBucket(tx.Bucket([]byte("info")), 0)
+			printBucket(tx.Bucket([]byte("services")), 0)
 		case *configKey == "":
-			displayService(tx.Bucket([]byte("services")), []byte(*configService))
+			printBucket(getBucket(tx, "services."+*configService), 0)
 		case *configValue == "":
 			displayServiceKey(tx, *configService, *configKey)
 		default:
@@ -119,33 +120,16 @@ func displayConfig() error {
 	return err
 }
 
-func displayAllServices(tx *bolt.Tx) {
-	info := tx.Bucket([]byte("info")).Cursor()
-	for k, v := info.First(); k != nil; k, v = info.Next() {
-		fmt.Printf("%s: %s\n", k, v)
-	}
-
-	serv := tx.Bucket([]byte("services"))
-	c := serv.Cursor()
-
-	for s, _ := c.First(); s != nil; s, _ = c.Next() {
-		fmt.Printf("%s:\n", string(s))
-		b := serv.Bucket(s)
-		printBucket(b, 1)
-	}
-}
-
-func displayService(b *bolt.Bucket, service []byte) {
-	fmt.Printf("%s:\n", service)
-	c := b.Bucket(service).Cursor()
-	for k, v := c.First(); k != nil; k, v = c.Next() {
-		fmt.Printf("	%s: %s\n", k, v)
-	}
-}
-
 func displayServiceKey(tx *bolt.Tx, service, key string) {
-	v := tx.Bucket([]byte("services")).Bucket([]byte(service)).Get([]byte(key))
-	fmt.Println(string(v))
+	b := getBucket(tx, "services."+service)
+	if b == nil {
+		return
+	}
+	if v := b.Get([]byte(key)); v == nil {
+		printBucket(b.Bucket([]byte(key)), 0)
+	} else {
+		fmt.Println(string(v))
+	}
 }
 
 func setConfig(tx *bolt.Tx, service, key, value string) error {

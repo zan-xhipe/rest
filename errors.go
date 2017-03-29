@@ -21,6 +21,14 @@ func (e ErrNoService) Error() string {
 	return fmt.Sprintf("no service %s found", e.Name)
 }
 
+type ErrInvalidPath struct {
+	Path string
+}
+
+func (e ErrInvalidPath) Error() string {
+	return fmt.Sprintf("path %s not valid", e.Path)
+}
+
 var (
 	ErrNoInfoBucket     = ErrMalformedDB{Bucket: "info"}
 	ErrNoServicesBucket = ErrMalformedDB{Bucket: "services"}
