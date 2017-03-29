@@ -1,19 +1,30 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/boltdb/bolt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
 	verbose = kingpin.Flag("verbose", "Verbose mode").Short('v').Bool()
+
+	set       = kingpin.Command("set", "initialise rest session")
+	setHost   = set.Flag("host", "hostname for the service").String()
+	setPort   = set.Flag("port", "port to access the service").Int()
+	setScheme = set.Flag("scheme", "scheme used to access the service eg. http, https").String()
 
 	get     = kingpin.Command("get", "Perform a GET request")
 	getPath = get.Arg("url", "url to perform request on").Required().String()
@@ -31,42 +42,125 @@ var (
 )
 
 func main() {
+	command := kingpin.Parse()
+	switch command {
+	case "set":
+		if err := setValues(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	case "get", "post", "put", "delete":
+		resp, err := makeRequest(command)
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		fmt.Print(string(body))
+	}
+}
+
+func setValues() error {
+	if *verbose {
+		fmt.Println("opening database", ".rest.db")
+	}
+
+	db, err := bolt.Open(".rest.db", 0600, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	err = db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte("service"))
+		if err != nil {
+			return err
+		}
+
+		if setScheme != nil {
+			if err := b.Put([]byte("scheme"), []byte(*setScheme)); err != nil {
+				return err
+			}
+		}
+
+		if setHost != nil {
+			if err := b.Put([]byte("host"), []byte(*setHost)); err != nil {
+				return err
+			}
+		}
+
+		if setPort != nil {
+			buf := make([]byte, 4)
+			binary.PutVarint(buf, int64(*setPort))
+			if err := b.Put([]byte("port"), buf); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return err
+}
+
+func getValues() (*url.URL, error) {
+	db, err := bolt.Open(".rest.db", 0600, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	u := &url.URL{}
+	err = db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("service"))
+		if b == nil {
+			return errors.New("no service bucket")
+		}
+
+		u.Scheme = string(b.Get([]byte("scheme")))
+		hostname := string(b.Get([]byte("host")))
+		port, err := binary.ReadVarint(bytes.NewReader(b.Get([]byte("port"))))
+		if err != nil {
+			return err
+		}
+		u.Host = fmt.Sprintf("%s:%d", hostname, port)
+
+		return nil
+	})
+
+	return u, err
+}
+
+func makeRequest(reqType string) (*http.Response, error) {
+	u, err := getValues()
+	if err != nil {
+		return nil, err
+	}
+
+	u.Path = path()
+	if *verbose {
+		fmt.Println(u)
+	}
+
 	client := &http.Client{}
 
-	reqType := strings.ToUpper(kingpin.Parse())
-	req, err := http.NewRequest(reqType, path(), data())
+	req, err := http.NewRequest(strings.ToUpper(reqType), u.String(), data())
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return nil, err
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(2)
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	fmt.Print(string(body))
+	return client.Do(req)
 }
 
 func path() string {
 	for _, p := range []*string{getPath, postPath, putPath, deletePath} {
-		if p != nil {
-			u, err := url.Parse(*p)
-			if err != nil {
-				panic(err)
-			}
-
-			if u.Scheme == "" {
-				u.Scheme = "http"
-			}
-
-			if u.Host == "" {
-				u.Host = "localhost:80"
-			}
-
-			return u.String()
+		if *p != "" {
+			return *p
 		}
 	}
 
