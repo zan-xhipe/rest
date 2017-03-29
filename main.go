@@ -135,24 +135,16 @@ func setValues() error {
 			return err
 		}
 
-		if setScheme != nil {
-			if err := b.Put([]byte("scheme"), []byte(*setScheme)); err != nil {
-				return err
-			}
+		if err := setString(b, "scheme", setScheme, "http"); err != nil {
+			return err
 		}
 
-		if setHost != nil {
-			if err := b.Put([]byte("host"), []byte(*setHost)); err != nil {
-				return err
-			}
+		if err := setString(b, "host", setHost, "localhost"); err != nil {
+			return err
 		}
 
-		if setPort != nil {
-			buf := make([]byte, 4)
-			binary.PutVarint(buf, int64(*setPort))
-			if err := b.Put([]byte("port"), buf); err != nil {
-				return err
-			}
+		if err := setInt(b, "port", setPort, 80); err != nil {
+			return err
 		}
 
 		// if this is the first service to be set then set then also make it current service
@@ -171,6 +163,34 @@ func setValues() error {
 	})
 
 	return err
+}
+
+func setString(b *bolt.Bucket, key string, value *string, defaultValue string) error {
+	var v string
+	switch {
+	case value == nil:
+		v = defaultValue
+	case *value == "":
+		v = defaultValue
+	default:
+		v = *value
+	}
+
+	return b.Put([]byte(key), []byte(v))
+}
+
+func setInt(b *bolt.Bucket, key string, value *int, defaultValue int) error {
+	var v int
+	switch {
+	case value == nil:
+		v = defaultValue
+	default:
+		v = *value
+	}
+
+	buf := make([]byte, 4)
+	binary.PutVarint(buf, int64(v))
+	return b.Put([]byte(key), buf)
 }
 
 func getValues() (*url.URL, error) {
