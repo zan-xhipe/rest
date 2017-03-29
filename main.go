@@ -32,6 +32,8 @@ var (
 
 	config        = kingpin.Command("config", "show and alter service configs")
 	configService = config.Arg("service", "service to display").String()
+	configKey     = config.Arg("key", "specific service setting").String()
+	configValue   = config.Arg("value", "set the config key to this value").String()
 
 	get     = kingpin.Command("get", "Perform a GET request")
 	getPath = get.Arg("url", "url to perform request on").Required().String()
@@ -96,29 +98,36 @@ func displayConfig() error {
 	}
 	defer db.Close()
 
-	err = db.View(func(tx *bolt.Tx) error {
-		if *configService == "" {
-			info := tx.Bucket([]byte("info")).Cursor()
-			for k, v := info.First(); k != nil; k, v = info.Next() {
-				fmt.Printf("%s: %s\n", k, v)
-			}
-
-			serv := tx.Bucket([]byte("services"))
-			c := serv.Cursor()
-
-			for s, _ := c.First(); s != nil; s, _ = c.Next() {
-				displayService(serv, s)
-			}
-
-			return nil
+	err = db.Update(func(tx *bolt.Tx) error {
+		switch {
+		case *configService == "":
+			displayAllServices(tx)
+		case *configKey == "":
+			displayService(tx.Bucket([]byte("services")), []byte(*configService))
+		case *configValue == "":
+			displayServiceKey(tx, *configService, *configKey)
+		default:
+			setConfig(tx, *configService, *configKey, *configValue)
 		}
-
-		displayService(tx.Bucket([]byte("services")), []byte(*configService))
 
 		return nil
 	})
 
 	return err
+}
+
+func displayAllServices(tx *bolt.Tx) {
+	info := tx.Bucket([]byte("info")).Cursor()
+	for k, v := info.First(); k != nil; k, v = info.Next() {
+		fmt.Printf("%s: %s\n", k, v)
+	}
+
+	serv := tx.Bucket([]byte("services"))
+	c := serv.Cursor()
+
+	for s, _ := c.First(); s != nil; s, _ = c.Next() {
+		displayService(serv, s)
+	}
 }
 
 func displayService(b *bolt.Bucket, service []byte) {
@@ -127,6 +136,15 @@ func displayService(b *bolt.Bucket, service []byte) {
 	for k, v := c.First(); k != nil; k, v = c.Next() {
 		fmt.Printf("	%s: %s\n", k, v)
 	}
+}
+
+func displayServiceKey(tx *bolt.Tx, service, key string) {
+	v := tx.Bucket([]byte("services")).Bucket([]byte(service)).Get([]byte(key))
+	fmt.Println(string(v))
+}
+
+func setConfig(tx *bolt.Tx, service, key, value string) error {
+	return tx.Bucket([]byte("services")).Bucket([]byte(service)).Put([]byte(key), []byte(value))
 }
 
 func useService() error {
