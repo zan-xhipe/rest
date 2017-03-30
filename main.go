@@ -50,6 +50,7 @@ var (
 )
 
 func init() {
+	set.Arg("service", "the service to use").Required().StringVar(&service)
 	set.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
 	set.Flag("header", "header to set for each request").StringMapVar(&headers)
 	set.Flag("host", "hostname for the service").StringVar(&host)
