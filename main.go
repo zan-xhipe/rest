@@ -21,9 +21,6 @@ var (
 	verbose = kingpin.Flag("verbose", "Verbose mode").Short('v').Bool()
 
 	set = kingpin.Command("init", "initialise rest session")
-	// _          = set.Arg("service", "the service to set values for").Required().Action(setService)
-	setHost = set.Flag("host", "hostname for the servicpe").String()
-	setPort = set.Flag("port", "port to access the service").Int()
 
 	use = kingpin.Command("use", "switch service")
 
@@ -43,6 +40,8 @@ var (
 	dbFile string
 
 	scheme    string
+	host      string
+	port      int
 	service   string
 	path      string
 	data      string
@@ -53,6 +52,8 @@ var (
 func init() {
 	set.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
 	set.Flag("header", "header to set for each request").StringMapVar(&headers)
+	set.Flag("host", "hostname for the service").StringVar(&host)
+	set.Flag("port", "port to access the service").IntVar(&port)
 
 	use.Arg("service", "the service to use").Required().StringVar(&service)
 
@@ -63,6 +64,8 @@ func init() {
 	get.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
 	get.Flag("header", "set header for request").StringMapVar(&headers)
 	get.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
+	get.Flag("host", "hostname for the service").StringVar(&host)
+	get.Flag("port", "port to access the service").IntVar(&port)
 
 	post.Arg("path", "url to perform request on").Required().StringVar(&path)
 	post.Arg("data", "data to send in the request").Required().StringVar(&data)
@@ -70,6 +73,8 @@ func init() {
 	post.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
 	post.Flag("header", "set header for request").StringMapVar(&headers)
 	post.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
+	post.Flag("host", "hostname for the service").StringVar(&host)
+	post.Flag("port", "port to access the service").IntVar(&port)
 
 	put.Arg("path", "url to perform request on").Required().StringVar(&path)
 	put.Arg("data", "data to send in the request").Required().StringVar(&data)
@@ -77,12 +82,16 @@ func init() {
 	put.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
 	put.Flag("header", "set header for request").StringMapVar(&headers)
 	put.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
+	put.Flag("host", "hostname for the service").StringVar(&host)
+	put.Flag("port", "port to access the service").IntVar(&port)
 
 	delete.Arg("path", "url to perform request on").Required().StringVar(&path)
 	delete.Flag("service", "the service to use").StringVar(&path)
 	delete.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
 	delete.Flag("header", "set header for request").StringMapVar(&headers)
 	delete.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
+	delete.Flag("host", "hostname for the service").StringVar(&host)
+	delete.Flag("port", "port to access the service").IntVar(&port)
 
 	dir, err := homedir.Dir()
 	if err != nil {
@@ -226,11 +235,11 @@ func setValues() error {
 			return err
 		}
 
-		if err := setString(b, "host", setHost, "localhost"); err != nil {
+		if err := setString(b, "host", &host, "localhost"); err != nil {
 			return err
 		}
 
-		if err := setInt(b, "port", setPort, 80); err != nil {
+		if err := setInt(b, "port", &port, 80); err != nil {
 			return err
 		}
 
@@ -294,12 +303,25 @@ func getValues() (*url.URL, map[string]string, error) {
 			return ErrNoService{Name: string(current)}
 		}
 
-		u.Scheme = string(b.Get([]byte("scheme")))
-		hostname := string(b.Get([]byte("host")))
-		port, err := binary.ReadVarint(bytes.NewReader(b.Get([]byte("port"))))
-		if err != nil {
-			return err
+		if scheme == "" {
+			u.Scheme = string(b.Get([]byte("scheme")))
+		} else {
+			u.Scheme = scheme
 		}
+
+		hostname := host
+		if host == "" {
+			hostname = string(b.Get([]byte("host")))
+		}
+
+		if port == 0 {
+			p, err := binary.ReadVarint(bytes.NewReader(b.Get([]byte("port"))))
+			if err != nil {
+				return err
+			}
+			port = int(p)
+		}
+
 		u.Host = fmt.Sprintf("%s:%d", hostname, port)
 
 		if h := b.Bucket([]byte("headers")); h != nil {
