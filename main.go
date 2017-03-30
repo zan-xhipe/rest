@@ -38,17 +38,21 @@ var (
 
 	get = kingpin.Command("get", "Perform a GET request")
 	_   = get.Arg("path", "url to perform request on").Required().Action(setPath).String()
+	_   = get.Flag("service", "the service to use").Action(setService).String()
 
 	post = kingpin.Command("post", "Perform a POST request")
 	_    = post.Arg("path", "url to perform request on").Required().Action(setPath).String()
 	_    = post.Arg("data", "data to send in the POST request").Required().Action(setData).String()
+	_    = post.Flag("service", "the service to use").Action(setService).String()
 
 	put = kingpin.Command("put", "Perform a PUT request")
 	_   = put.Arg("path", "url to perform request on").Required().Action(setPath).String()
 	_   = put.Arg("data", "data to send in the PUT request").Required().Action(setData).String()
+	_   = put.Flag("service", "the service to use").Action(setService).String()
 
 	delete = kingpin.Command("delete", "Performa DELETE request")
 	_      = delete.Arg("path", "url to perform request on").Required().Action(setPath).String()
+	_      = delete.Flag("service", "the service to use").Action(setService).String()
 
 	dbFile string
 
