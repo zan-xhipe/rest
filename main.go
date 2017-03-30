@@ -99,6 +99,8 @@ func init() {
 		panic(err)
 	}
 	dbFile = fmt.Sprintf("%s/%s", dir, ".rest.db")
+
+	kingpin.Flag("db", "which config database to use").Default(dbFile).StringVar(&dbFile)
 }
 
 func main() {
