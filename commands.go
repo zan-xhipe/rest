@@ -10,7 +10,7 @@ var (
 	get    = kingpin.Command("get", "Perform a GET request")
 	post   = kingpin.Command("post", "Perform a POST request")
 	put    = kingpin.Command("put", "Perform a PUT request")
-	delete = kingpin.Command("delete", "Performa DELETE request")
+	delete = kingpin.Command("delete", "Perform a DELETE request")
 )
 
 func init() {
