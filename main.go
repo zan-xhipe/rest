@@ -232,15 +232,15 @@ func setValues() error {
 			return err
 		}
 
-		if err := setString(b, "scheme", &scheme, "http"); err != nil {
+		if err := setString(b, "scheme", scheme, "http"); err != nil {
 			return err
 		}
 
-		if err := setString(b, "host", &host, "localhost"); err != nil {
+		if err := setString(b, "host", host, "localhost"); err != nil {
 			return err
 		}
 
-		if err := setInt(b, "port", &port, 80); err != nil {
+		if err := setInt(b, "port", port, 80); err != nil {
 			return err
 		}
 
