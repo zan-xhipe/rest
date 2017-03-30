@@ -3,13 +3,10 @@ package main
 import (
 	"fmt"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
-
 	"github.com/boltdb/bolt"
 )
 
 var (
-	config      = kingpin.Command("config", "show and alter service configs")
 	configKey   *string
 	configValue *string
 )

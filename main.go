@@ -20,18 +20,6 @@ import (
 var (
 	verbose = kingpin.Flag("verbose", "Verbose mode").Short('v').Bool()
 
-	set = kingpin.Command("init", "initialise rest session")
-
-	use = kingpin.Command("use", "switch service")
-
-	get = kingpin.Command("get", "Perform a GET request")
-
-	post = kingpin.Command("post", "Perform a POST request")
-
-	put = kingpin.Command("put", "Perform a PUT request")
-
-	delete = kingpin.Command("delete", "Performa DELETE request")
-
 	dbFile string
 
 	scheme     string
@@ -51,47 +39,7 @@ var (
 )
 
 func init() {
-	set.Arg("service", "the service to use").Required().StringVar(&service)
-	set.Flag("scheme", "scheme used to access the service").Default("http").Action(usedFlag(&usedScheme)).StringVar(&scheme)
-	set.Flag("header", "header to set for each request").StringMapVar(&headers)
-	set.Flag("host", "hostname for the service").Default("localhost").Action(usedFlag(&usedHost)).StringVar(&host)
-	set.Flag("port", "port to access the service").Default("80").IntVar(&port)
-
 	use.Arg("service", "the service to use").Required().StringVar(&service)
-
-	get.Arg("path", "url to perform request on").Required().StringVar(&path)
-	get.Flag("service", "the service to use").StringVar(&service)
-	get.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
-	get.Flag("header", "set header for request").StringMapVar(&headers)
-	get.Flag("scheme", "scheme used to access the service").Default("http").Action(usedFlag(&usedScheme)).StringVar(&scheme)
-	get.Flag("host", "hostname for the service").Default("localhost").Action(usedFlag(&usedHost)).StringVar(&host)
-	get.Flag("port", "port to access the service").Default("80").Action(usedFlag(&usedPort)).IntVar(&port)
-
-	post.Arg("path", "url to perform request on").Required().StringVar(&path)
-	post.Arg("data", "data to send in the request").Required().StringVar(&data)
-	post.Flag("service", "the service to use").StringVar(&service)
-	post.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
-	post.Flag("header", "set header for request").StringMapVar(&headers)
-	post.Flag("scheme", "scheme used to access the service").Default("http").Action(usedFlag(&usedScheme)).StringVar(&scheme)
-	post.Flag("host", "hostname for the service").Default("localhost").Action(usedFlag(&usedHost)).StringVar(&host)
-	post.Flag("port", "port to access the service").Default("80").Action(usedFlag(&usedPort)).IntVar(&port)
-
-	put.Arg("path", "url to perform request on").Required().StringVar(&path)
-	put.Arg("data", "data to send in the request").Required().StringVar(&data)
-	put.Flag("service", "the service to use").StringVar(&data)
-	put.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
-	put.Flag("header", "set header for request").StringMapVar(&headers)
-	put.Flag("scheme", "scheme used to access the service").Default("http").StringVar(&scheme)
-	put.Flag("host", "hostname for the service").Default("localhost").Action(usedFlag(&usedHost)).StringVar(&host)
-	put.Flag("port", "port to access the service").Default("80").Action(usedFlag(&usedPort)).IntVar(&port)
-
-	delete.Arg("path", "url to perform request on").Required().StringVar(&path)
-	delete.Flag("service", "the service to use").StringVar(&path)
-	delete.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
-	delete.Flag("header", "set header for request").StringMapVar(&headers)
-	delete.Flag("scheme", "scheme used to access the service").Default("http").Action(usedFlag(&usedScheme)).StringVar(&scheme)
-	delete.Flag("host", "hostname for the service").Default("localhost").Action(usedFlag(&usedHost)).StringVar(&host)
-	delete.Flag("port", "port to access the service").Default("80").Action(usedFlag(&usedPort)).IntVar(&port)
 
 	dir, err := homedir.Dir()
 	if err != nil {
