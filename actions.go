@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"strings"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -46,6 +47,25 @@ func setService(ctx *kingpin.ParseContext) error {
 				service = clause.Model().Value.String()
 				return nil
 			}
+		}
+	}
+
+	return nil
+}
+
+func setNoHeaders(ctx *kingpin.ParseContext) error {
+	for _, c := range ctx.Elements {
+		clause, ok := c.Clause.(*kingpin.FlagClause)
+
+		if ok && clause.Model().Name == "no-headers" {
+			v, err := strconv.ParseBool(*c.Value)
+			if err != nil {
+				return err
+			}
+
+			noHeaders = v
+
+			return nil
 		}
 	}
 

@@ -37,28 +37,37 @@ var (
 	configValue = config.Arg("value", "set the config key to this value").String()
 
 	get = kingpin.Command("get", "Perform a GET request")
-	_   = get.Arg("path", "url to perform request on").Required().Action(setPath).String()
-	_   = get.Flag("service", "the service to use").Action(setService).String()
+
+	_ = get.Arg("path", "url to perform request on").Required().Action(setPath).String()
+	_ = get.Flag("service", "the service to use").Action(setService).String()
+	_ = get.Flag("no-headers", "ignore stored service headers").Action(setNoHeaders).Bool()
 
 	post = kingpin.Command("post", "Perform a POST request")
-	_    = post.Arg("path", "url to perform request on").Required().Action(setPath).String()
-	_    = post.Arg("data", "data to send in the POST request").Required().Action(setData).String()
-	_    = post.Flag("service", "the service to use").Action(setService).String()
+
+	_ = post.Arg("path", "url to perform request on").Required().Action(setPath).String()
+	_ = post.Arg("data", "data to send in the POST request").Required().Action(setData).String()
+	_ = post.Flag("service", "the service to use").Action(setService).String()
+	_ = post.Flag("no-headers", "ignore stored service headers").Action(setNoHeaders).Bool()
 
 	put = kingpin.Command("put", "Perform a PUT request")
-	_   = put.Arg("path", "url to perform request on").Required().Action(setPath).String()
-	_   = put.Arg("data", "data to send in the PUT request").Required().Action(setData).String()
-	_   = put.Flag("service", "the service to use").Action(setService).String()
+
+	_ = put.Arg("path", "url to perform request on").Required().Action(setPath).String()
+	_ = put.Arg("data", "data to send in the PUT request").Required().Action(setData).String()
+	_ = put.Flag("service", "the service to use").Action(setService).String()
+	_ = put.Flag("no-headers", "ignore stored service headers").Action(setNoHeaders).Bool()
 
 	delete = kingpin.Command("delete", "Performa DELETE request")
-	_      = delete.Arg("path", "url to perform request on").Required().Action(setPath).String()
-	_      = delete.Flag("service", "the service to use").Action(setService).String()
+
+	_ = delete.Arg("path", "url to perform request on").Required().Action(setPath).String()
+	_ = delete.Flag("service", "the service to use").Action(setService).String()
+	_ = delete.Flag("no-headers", "ignore stored service headers").Action(setNoHeaders).Bool()
 
 	dbFile string
 
-	service string
-	path    string
-	data    io.Reader
+	service   string
+	path      string
+	data      io.Reader
+	noHeaders bool
 )
 
 func init() {
@@ -308,8 +317,10 @@ func makeRequest(reqType string) (*http.Response, error) {
 
 	req, err := http.NewRequest(strings.ToUpper(reqType), u.String(), data)
 
-	for key, value := range headers {
-		req.Header.Set(key, value)
+	if !noHeaders {
+		for key, value := range headers {
+			req.Header.Set(key, value)
+		}
 	}
 
 	if err != nil {
