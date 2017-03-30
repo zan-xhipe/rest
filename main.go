@@ -281,7 +281,7 @@ func getValues() (*url.URL, map[string]string, error) {
 		return nil
 	})
 
-	return u, nil, err
+	return u, headers, err
 }
 
 func makeRequest(reqType string) (*http.Response, error) {
