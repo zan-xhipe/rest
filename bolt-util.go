@@ -43,22 +43,12 @@ func printBucket(b *bolt.Bucket, level int) {
 	}
 }
 
-func setString(b *bolt.Bucket, key, value, defaultValue string) error {
-	v := defaultValue
-	if value != "" {
-		v = value
-	}
-
-	return b.Put([]byte(key), []byte(v))
+func setString(b *bolt.Bucket, key, value string) error {
+	return b.Put([]byte(key), []byte(value))
 }
 
-func setInt(b *bolt.Bucket, key string, value, defaultValue int) error {
-	v := defaultValue
-	if value != 0 {
-		v = value
-	}
-
+func setInt(b *bolt.Bucket, key string, value int) error {
 	buf := make([]byte, 4)
-	binary.PutVarint(buf, int64(v))
+	binary.PutVarint(buf, int64(value))
 	return b.Put([]byte(key), buf)
 }
