@@ -24,11 +24,6 @@ var (
 
 	use = kingpin.Command("use", "switch service")
 
-	config = kingpin.Command("config", "show and alter service configs")
-
-	configKey   = config.Arg("key", "specific service setting").String()
-	configValue = config.Arg("value", "set the config key to this value").String()
-
 	get = kingpin.Command("get", "Perform a GET request")
 
 	post = kingpin.Command("post", "Perform a POST request")
@@ -63,8 +58,6 @@ func init() {
 	set.Flag("port", "port to access the service").Default("80").IntVar(&port)
 
 	use.Arg("service", "the service to use").Required().StringVar(&service)
-
-	config.Arg("service", "service to display").StringVar(&service)
 
 	get.Arg("path", "url to perform request on").Required().StringVar(&path)
 	get.Flag("service", "the service to use").StringVar(&service)
@@ -139,50 +132,6 @@ func main() {
 		body, err := ioutil.ReadAll(resp.Body)
 		fmt.Println(string(body))
 	}
-}
-
-func displayConfig() error {
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	err = db.Update(func(tx *bolt.Tx) error {
-		switch {
-		case service == "":
-			printBucket(tx.Bucket([]byte("info")), 0)
-			printBucket(tx.Bucket([]byte("services")), 0)
-		case *configKey == "":
-			printBucket(getBucket(tx, "services."+service), 0)
-		case *configValue == "":
-			displayServiceKey(tx, service, *configKey)
-		default:
-			if err := setConfig(tx, service, *configKey, *configValue); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	return err
-}
-
-func displayServiceKey(tx *bolt.Tx, service, key string) {
-	b := getBucket(tx, "services."+service)
-	if b == nil {
-		return
-	}
-	if v := b.Get([]byte(key)); v == nil {
-		printBucket(b.Bucket([]byte(key)), 0)
-	} else {
-		fmt.Println(string(v))
-	}
-}
-
-func setConfig(tx *bolt.Tx, service, key, value string) error {
-	return tx.Bucket([]byte("services")).Bucket([]byte(service)).Put([]byte(key), []byte(value))
 }
 
 func useService() error {
