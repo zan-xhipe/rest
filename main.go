@@ -45,14 +45,14 @@ var (
 	post = kingpin.Command("post", "Perform a POST request")
 
 	_ = post.Arg("path", "url to perform request on").Required().Action(setPath).String()
-	_ = post.Arg("data", "data to send in the POST request").Required().Action(setData).String()
+	_ = post.Arg("data", "data to send in the request").Required().Action(setData).String()
 	_ = post.Flag("service", "the service to use").Action(setService).String()
 	_ = post.Flag("no-headers", "ignore stored service headers").Action(setNoHeaders).Bool()
 
 	put = kingpin.Command("put", "Perform a PUT request")
 
 	_ = put.Arg("path", "url to perform request on").Required().Action(setPath).String()
-	_ = put.Arg("data", "data to send in the PUT request").Required().Action(setData).String()
+	_ = put.Arg("data", "data to send in the request").Required().Action(setData).String()
 	_ = put.Flag("service", "the service to use").Action(setService).String()
 	_ = put.Flag("no-headers", "ignore stored service headers").Action(setNoHeaders).Bool()
 
