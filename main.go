@@ -21,36 +21,40 @@ import (
 var (
 	verbose = kingpin.Flag("verbose", "Verbose mode").Short('v').Bool()
 
-	set        = kingpin.Command("set", "initialise rest session")
-	setService = set.Arg("service", "the service to set values for").Required().String()
+	set = kingpin.Command("init", "initialise rest session")
+	// _          = set.Arg("service", "the service to set values for").Required().Action(setService)
 	setHost    = set.Flag("host", "hostname for the servicpe").String()
 	setPort    = set.Flag("port", "port to access the service").Int()
 	setScheme  = set.Flag("scheme", "scheme used to access the service eg. http, https").String()
 	setHeaders = set.Flag("header", "header to set for each request").StringMap()
 
-	use          = kingpin.Command("use", "switch service")
-	serviceToUse = use.Arg("service", "the service to use").Required().String()
+	use = kingpin.Command("use", "switch service")
+	_   = use.Arg("service", "the service to use").Required().Action(setService).String()
 
-	config        = kingpin.Command("config", "show and alter service configs")
-	configService = config.Arg("service", "service to display").String()
-	configKey     = config.Arg("key", "specific service setting").String()
-	configValue   = config.Arg("value", "set the config key to this value").String()
+	config      = kingpin.Command("config", "show and alter service configs")
+	_           = config.Arg("service", "service to display").Action(setService).String()
+	configKey   = config.Arg("key", "specific service setting").String()
+	configValue = config.Arg("value", "set the config key to this value").String()
 
-	get     = kingpin.Command("get", "Perform a GET request")
-	getPath = get.Arg("url", "url to perform request on").Required().String()
+	get = kingpin.Command("get", "Perform a GET request")
+	_   = get.Arg("path", "url to perform request on").Required().Action(setPath).String()
 
-	post     = kingpin.Command("post", "Perform a POST request")
-	postPath = post.Arg("url", "url to perform request on").Required().String()
-	postData = post.Arg("data", "data to send in the POST request").Required().String()
+	post = kingpin.Command("post", "Perform a POST request")
+	_    = post.Arg("path", "url to perform request on").Required().Action(setPath).String()
+	_    = post.Arg("data", "data to send in the POST request").Required().Action(setData).String()
 
-	put     = kingpin.Command("put", "Perform a PUT request")
-	putPath = put.Arg("url", "url to perform request on").Required().String()
-	putData = put.Arg("data", "data to send in the PUT request").Required().String()
+	put = kingpin.Command("put", "Perform a PUT request")
+	_   = put.Arg("path", "url to perform request on").Required().Action(setPath).String()
+	_   = put.Arg("data", "data to send in the PUT request").Required().Action(setData).String()
 
-	delete     = kingpin.Command("delete", "Performa DELETE request")
-	deletePath = delete.Arg("url", "url to perform request on").Required().String()
+	delete = kingpin.Command("delete", "Performa DELETE request")
+	_      = delete.Arg("path", "url to perform request on").Required().Action(setPath).String()
 
 	dbFile string
+
+	service string
+	path    string
+	data    io.Reader
 )
 
 func init() {
@@ -63,8 +67,9 @@ func init() {
 
 func main() {
 	command := kingpin.Parse()
+
 	switch command {
-	case "set":
+	case "init":
 		if err := setValues(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -101,15 +106,15 @@ func displayConfig() error {
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		switch {
-		case *configService == "":
+		case service == "":
 			printBucket(tx.Bucket([]byte("info")), 0)
 			printBucket(tx.Bucket([]byte("services")), 0)
 		case *configKey == "":
-			printBucket(getBucket(tx, "services."+*configService), 0)
+			printBucket(getBucket(tx, "services."+service), 0)
 		case *configValue == "":
-			displayServiceKey(tx, *configService, *configKey)
+			displayServiceKey(tx, service, *configKey)
 		default:
-			if err := setConfig(tx, *configService, *configKey, *configValue); err != nil {
+			if err := setConfig(tx, service, *configKey, *configValue); err != nil {
 				return err
 			}
 		}
@@ -149,8 +154,8 @@ func useService() error {
 			return ErrNoServicesBucket
 		}
 
-		if b := serviceBucket.Bucket([]byte(*serviceToUse)); b == nil {
-			return ErrNoService{Name: *serviceToUse}
+		if b := serviceBucket.Bucket([]byte(service)); b == nil {
+			return ErrNoService{Name: service}
 		}
 
 		info, err := tx.CreateBucketIfNotExists([]byte("info"))
@@ -158,7 +163,7 @@ func useService() error {
 			return err
 		}
 
-		err = info.Put([]byte("current"), []byte(*serviceToUse))
+		err = info.Put([]byte("current"), []byte(service))
 		if err != nil {
 			return err
 		}
@@ -186,7 +191,7 @@ func setValues() error {
 			return err
 		}
 
-		b, err := serviceBucket.CreateBucketIfNotExists([]byte(*setService))
+		b, err := serviceBucket.CreateBucketIfNotExists([]byte(service))
 		if err != nil {
 			return err
 		}
@@ -222,7 +227,7 @@ func setValues() error {
 				return err
 			}
 
-			if err := ib.Put([]byte("current"), []byte(*setService)); err != nil {
+			if err := ib.Put([]byte("current"), []byte(service)); err != nil {
 				return err
 			}
 		}
@@ -290,14 +295,14 @@ func makeRequest(reqType string) (*http.Response, error) {
 		return nil, err
 	}
 
-	u.Path = path()
+	u.Path = path
 	if *verbose {
 		fmt.Println(u)
 	}
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest(strings.ToUpper(reqType), u.String(), data())
+	req, err := http.NewRequest(strings.ToUpper(reqType), u.String(), data)
 
 	for key, value := range headers {
 		req.Header.Set(key, value)
@@ -308,24 +313,4 @@ func makeRequest(reqType string) (*http.Response, error) {
 	}
 
 	return client.Do(req)
-}
-
-func path() string {
-	for _, p := range []*string{getPath, postPath, putPath, deletePath} {
-		if *p != "" {
-			return *p
-		}
-	}
-
-	return ""
-}
-
-func data() io.Reader {
-	for _, d := range []*string{postData, putData} {
-		if d != nil {
-			return strings.NewReader(*d)
-		}
-	}
-
-	return nil
 }
