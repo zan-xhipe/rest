@@ -22,10 +22,8 @@ var (
 
 	set = kingpin.Command("init", "initialise rest session")
 	// _          = set.Arg("service", "the service to set values for").Required().Action(setService)
-	setHost    = set.Flag("host", "hostname for the servicpe").String()
-	setPort    = set.Flag("port", "port to access the service").Int()
-	setScheme  = set.Flag("scheme", "scheme used to access the service eg. http, https").String()
-	setHeaders = set.Flag("header", "header to set for each request").StringMap()
+	setHost = set.Flag("host", "hostname for the servicpe").String()
+	setPort = set.Flag("port", "port to access the service").Int()
 
 	use = kingpin.Command("use", "switch service")
 
@@ -44,6 +42,7 @@ var (
 
 	dbFile string
 
+	scheme    string
 	service   string
 	path      string
 	data      string
@@ -52,6 +51,9 @@ var (
 )
 
 func init() {
+	set.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
+	set.Flag("header", "header to set for each request").StringMapVar(&headers)
+
 	use.Arg("service", "the service to use").Required().StringVar(&service)
 
 	config.Arg("service", "service to display").StringVar(&service)
@@ -60,20 +62,27 @@ func init() {
 	get.Flag("service", "the service to use").StringVar(&service)
 	get.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
 	get.Flag("header", "set header for request").StringMapVar(&headers)
+	get.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
 
 	post.Arg("path", "url to perform request on").Required().StringVar(&path)
 	post.Arg("data", "data to send in the request").Required().StringVar(&data)
 	post.Flag("service", "the service to use").StringVar(&service)
 	post.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
+	post.Flag("header", "set header for request").StringMapVar(&headers)
+	post.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
 
 	put.Arg("path", "url to perform request on").Required().StringVar(&path)
 	put.Arg("data", "data to send in the request").Required().StringVar(&data)
 	put.Flag("service", "the service to use").StringVar(&data)
 	put.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
+	put.Flag("header", "set header for request").StringMapVar(&headers)
+	put.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
 
 	delete.Arg("path", "url to perform request on").Required().StringVar(&path)
 	delete.Flag("service", "the service to use").StringVar(&path)
 	delete.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
+	delete.Flag("header", "set header for request").StringMapVar(&headers)
+	delete.Flag("scheme", "scheme used to access the service eg. http, https").StringVar(&scheme)
 
 	dir, err := homedir.Dir()
 	if err != nil {
@@ -213,7 +222,7 @@ func setValues() error {
 			return err
 		}
 
-		if err := setString(b, "scheme", setScheme, "http"); err != nil {
+		if err := setString(b, "scheme", &scheme, "http"); err != nil {
 			return err
 		}
 
@@ -225,7 +234,7 @@ func setValues() error {
 			return err
 		}
 
-		for header, value := range *setHeaders {
+		for header, value := range headers {
 			h, err := b.CreateBucketIfNotExists([]byte("headers"))
 			if err != nil {
 				return err
@@ -307,7 +316,7 @@ func getValues() (*url.URL, map[string]string, error) {
 }
 
 func makeRequest(reqType string) (*http.Response, error) {
-	u, headers, err := getValues()
+	u, h, err := getValues()
 	if err != nil {
 		return nil, err
 	}
@@ -323,6 +332,10 @@ func makeRequest(reqType string) (*http.Response, error) {
 
 	if !noHeaders {
 		for key, value := range headers {
+			h[key] = value
+		}
+
+		for key, value := range h {
 			req.Header.Set(key, value)
 		}
 	}
