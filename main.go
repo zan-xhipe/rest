@@ -38,7 +38,7 @@ var (
 	data       string
 	noHeaders  bool
 	headers    map[string]string
-	query      string
+	filter     string
 	parameters map[string]string
 )
 
@@ -227,7 +227,7 @@ func showRequest(r *http.Response) error {
 		return err
 	}
 
-	if query == "" {
+	if filter == "" {
 		fmt.Println(string(body))
 		return nil
 	}
@@ -237,7 +237,7 @@ func showRequest(r *http.Response) error {
 		return err
 	}
 
-	result, err := parser.Query(query)
+	result, err := parser.Query(filter)
 	if err != nil {
 		return err
 	}
