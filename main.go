@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/boltdb/bolt"
+	"github.com/elgs/gojq"
 	homedir "github.com/mitchellh/go-homedir"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -36,6 +38,7 @@ var (
 	data      string
 	noHeaders bool
 	headers   map[string]string
+	query     string
 )
 
 func init() {
@@ -76,9 +79,11 @@ func main() {
 			log.Println(err)
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		fmt.Println(string(body))
+
+		if err := showRequest(resp); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 }
 
@@ -281,4 +286,35 @@ func usedFlag(b *bool) func(*kingpin.ParseContext) error {
 		*b = true
 		return nil
 	}
+}
+
+func showRequest(r *http.Response) error {
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+
+	if query == "" {
+		fmt.Println(string(body))
+		return nil
+	}
+
+	parser, err := gojq.NewStringQuery(string(body))
+	if err != nil {
+		return err
+	}
+
+	result, err := parser.Query(query)
+	if err != nil {
+		return err
+	}
+
+	out, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(out))
+	return nil
 }

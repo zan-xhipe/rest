@@ -39,6 +39,8 @@ func requestCommand(cmd *kingpin.CmdClause) {
 		Default("80").
 		Action(usedFlag(&usedPort)).
 		IntVar(&port)
+
+	cmd.Flag("query", "pull parts out of the returned json").StringVar(&query)
 }
 
 func requestDataCommand(cmd *kingpin.CmdClause) {
@@ -61,4 +63,6 @@ func requestDataCommand(cmd *kingpin.CmdClause) {
 		Default("80").
 		Action(usedFlag(&usedPort)).
 		IntVar(&port)
+
+	cmd.Flag("query", "pull parts out of the returned json").StringVar(&query)
 }
