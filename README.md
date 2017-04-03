@@ -28,3 +28,6 @@ Parameters can also be used in post data.
 ```
 rest post users '{"username": ":username", "full_name": "Other Person"}' --parameter username=other
 ```
+
+# Return Value
+Because rest is intended to be used alongside other command line programs the HTTP response code returned by the service is mapped to a return value.  Any 200 response is mapped to 0, any 300 is mapped 3, 400 to 4, and 500 to 5. Errors resulting from bad input from the cli or errors in the service database return 1.
