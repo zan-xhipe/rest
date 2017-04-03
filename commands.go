@@ -3,6 +3,7 @@ package main
 import kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 var (
+	_      = kingpin.Command("version", "display version info")
 	set    = kingpin.Command("init", "initialise rest session")
 	config = kingpin.Command("config", "show and alter service configs")
 	use    = kingpin.Command("use", "switch service")

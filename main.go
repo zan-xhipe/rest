@@ -18,6 +18,8 @@ import (
 )
 
 var (
+	versionNumber = "0.1"
+
 	verbose = kingpin.Flag("verbose", "Verbose mode").Short('v').Bool()
 
 	dbFile string
@@ -63,6 +65,8 @@ func main() {
 	command := kingpin.Parse()
 
 	switch command {
+	case "version":
+		fmt.Println(versionNumber)
 	case "init":
 		if err := setValues(); err != nil {
 			fmt.Println(err)
