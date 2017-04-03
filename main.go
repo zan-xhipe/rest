@@ -90,6 +90,13 @@ func main() {
 			fmt.Println("error displaying result:", err)
 			os.Exit(1)
 		}
+
+		// exit non zero if not a 200 response
+		if resp.StatusCode < 200 || resp.StatusCode > 300 {
+			// if the exit value gets too high it gets mangled
+			// so only keep the hundreds
+			os.Exit(resp.StatusCode / 100)
+		}
 	}
 }
 
