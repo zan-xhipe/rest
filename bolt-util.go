@@ -43,6 +43,18 @@ func printBucket(b *bolt.Bucket, level int) {
 	}
 }
 
+func bucketMap(b *bolt.Bucket, m *map[string]string) {
+	temp := make(map[string]string)
+	c := b.Cursor()
+	for k, v := c.First(); k != nil; k, v = c.Next() {
+		temp[string(k)] = string(v)
+	}
+	for key, value := range *m {
+		temp[key] = value
+	}
+	*m = temp
+}
+
 func setString(b *bolt.Bucket, key, value string) error {
 	return b.Put([]byte(key), []byte(value))
 }

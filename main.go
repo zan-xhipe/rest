@@ -175,29 +175,8 @@ func getValues() (*url.URL, error) {
 
 		u.Host = fmt.Sprintf("%s:%d", hostname, port)
 
-		head := make(map[string]string)
-		if h := b.Bucket([]byte("headers")); h != nil {
-			c := h.Cursor()
-			for k, v := c.First(); k != nil; k, v = c.Next() {
-				head[string(k)] = string(v)
-			}
-		}
-		for key, value := range headers {
-			head[key] = value
-		}
-		headers = head
-
-		param := make(map[string]string)
-		if p := b.Bucket([]byte("parameters")); p != nil {
-			c := p.Cursor()
-			for k, v := c.First(); k != nil; k, v = c.Next() {
-				param[string(k)] = string(v)
-			}
-		}
-		for key, value := range parameters {
-			param[key] = value
-		}
-		parameters = param
+		bucketMap(b.Bucket([]byte("headers")), &headers)
+		bucketMap(b.Bucket([]byte("parameters")), &parameters)
 
 		return nil
 	})
