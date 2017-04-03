@@ -221,15 +221,14 @@ func makeRequest(reqType string) (*http.Response, error) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest(strings.ToUpper(reqType), u.String(), strings.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
 
 	if !noHeaders {
 		for key, value := range headers {
 			req.Header.Set(key, value)
 		}
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	return client.Do(req)
