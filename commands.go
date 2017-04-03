@@ -25,6 +25,7 @@ func requestCommand(cmd *kingpin.CmdClause) {
 	cmd.Flag("service", "the service to use").StringVar(&path)
 	cmd.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
 	cmd.Flag("header", "set header for request").StringMapVar(&headers)
+	cmd.Flag("parameter", "set parameter for request").StringMapVar(&parameters)
 	cmd.Flag("scheme", "scheme used to access the service").
 		Default("http").
 		Action(usedFlag(&usedScheme)).
@@ -49,6 +50,7 @@ func requestDataCommand(cmd *kingpin.CmdClause) {
 	cmd.Flag("service", "the service to use").StringVar(&service)
 	cmd.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
 	cmd.Flag("header", "set header for request").StringMapVar(&headers)
+	cmd.Flag("parameter", "set parameter for request").StringMapVar(&parameters)
 	cmd.Flag("scheme", "scheme used to access the service").
 		Default("http").
 		Action(usedFlag(&usedScheme)).

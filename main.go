@@ -33,15 +33,19 @@ var (
 	port     int
 	usedPort bool
 
-	service   string
-	path      string
-	data      string
-	noHeaders bool
-	headers   map[string]string
-	query     string
+	service    string
+	path       string
+	data       string
+	noHeaders  bool
+	headers    map[string]string
+	query      string
+	parameters map[string]string
 )
 
 func init() {
+	headers = make(map[string]string)
+	parameters = make(map[string]string)
+
 	use.Arg("service", "the service to use").Required().StringVar(&service)
 
 	dir, err := homedir.Dir()
@@ -120,79 +124,14 @@ func useService() error {
 	return err
 }
 
-func setValues() error {
-	if *verbose {
-		fmt.Println("opening database", ".rest.db")
-	}
-
+func getValues() (*url.URL, error) {
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	err = db.Update(func(tx *bolt.Tx) error {
-		serviceBucket, err := tx.CreateBucketIfNotExists([]byte("services"))
-		if err != nil {
-			return err
-		}
-
-		b, err := serviceBucket.CreateBucketIfNotExists([]byte(service))
-		if err != nil {
-			return err
-		}
-
-		if err := setString(b, "scheme", scheme); err != nil {
-			return err
-		}
-
-		if err := setString(b, "host", host); err != nil {
-			return err
-		}
-
-		if err := setInt(b, "port", port); err != nil {
-			return err
-		}
-
-		for header, value := range headers {
-			h, err := b.CreateBucketIfNotExists([]byte("headers"))
-			if err != nil {
-				return err
-			}
-
-			if err := h.Put([]byte(header), []byte(value)); err != nil {
-				return err
-			}
-
-		}
-
-		// if this is the first service to be set then set then also make it current service
-		if info := tx.Bucket([]byte("info")); info == nil {
-			ib, err := tx.CreateBucket([]byte("info"))
-			if err != nil {
-				return err
-			}
-
-			if err := ib.Put([]byte("current"), []byte(service)); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	return err
-}
-
-func getValues() (*url.URL, map[string]string, error) {
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer db.Close()
 
 	u := &url.URL{}
-	headers := make(map[string]string)
 	err = db.View(func(tx *bolt.Tx) error {
 		info := tx.Bucket([]byte("info"))
 		if info == nil {
@@ -243,19 +182,33 @@ func getValues() (*url.URL, map[string]string, error) {
 			}
 		}
 
+		if p := b.Bucket([]byte("parameters")); p != nil {
+			c := p.Cursor()
+			for k, v := c.First(); k != nil; k, v = c.Next() {
+				parameters[string(k)] = string(v)
+			}
+		}
+
 		return nil
 	})
 
-	return u, headers, err
+	return u, err
 }
 
 func makeRequest(reqType string) (*http.Response, error) {
-	u, h, err := getValues()
+	u, err := getValues()
 	if err != nil {
 		return nil, err
 	}
 
-	u.Path = path
+	rep := make([]string, 0, len(parameters))
+	for key, value := range parameters {
+		rep = append(rep, ":"+key)
+		rep = append(rep, value)
+	}
+	paramReplacer := strings.NewReplacer(rep...)
+
+	u.Path = paramReplacer.Replace(path)
 	if *verbose {
 		fmt.Println(u)
 	}
@@ -266,10 +219,6 @@ func makeRequest(reqType string) (*http.Response, error) {
 
 	if !noHeaders {
 		for key, value := range headers {
-			h[key] = value
-		}
-
-		for key, value := range h {
 			req.Header.Set(key, value)
 		}
 	}
