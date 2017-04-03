@@ -38,6 +38,10 @@ var (
 	headers    map[string]string
 	filter     string
 	parameters map[string]string
+
+	pretty           bool
+	prettyIndent     string
+	usedPrettyIndent bool
 )
 
 func init() {
@@ -187,6 +191,14 @@ func getValues() (*url.URL, error) {
 		bucketMap(b.Bucket([]byte("headers")), &headers)
 		bucketMap(b.Bucket([]byte("parameters")), &parameters)
 
+		if err := getBool(b, "pretty", &pretty); err != nil {
+			return err
+		}
+
+		if pretty && !usedPrettyIndent {
+			prettyIndent = string(b.Get([]byte("pretty-indent")))
+		}
+
 		return nil
 	})
 
@@ -236,27 +248,27 @@ func showRequest(r *http.Response) error {
 		return err
 	}
 
-	if filter == "" {
+	switch {
+	case filter != "":
+		result, err := filterResult(body)
+		if err != nil {
+			return err
+		}
+		if err := printJSON(result); err != nil {
+			return err
+		}
+	case pretty:
+		var msg json.RawMessage
+		if err := json.Unmarshal(body, &msg); err != nil {
+			return err
+		}
+		if err := printJSON(msg); err != nil {
+			return err
+		}
+	default:
 		fmt.Println(string(body))
-		return nil
 	}
 
-	parser, err := gojq.NewStringQuery(string(body))
-	if err != nil {
-		return err
-	}
-
-	result, err := parser.Query(filter)
-	if err != nil {
-		return err
-	}
-
-	out, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(string(out))
 	return nil
 }
 
@@ -267,4 +279,28 @@ func paramReplacer(parameters map[string]string) *strings.Replacer {
 		rep = append(rep, value)
 	}
 	return strings.NewReplacer(rep...)
+}
+
+func filterResult(body []byte) (interface{}, error) {
+	parser, err := gojq.NewStringQuery(string(body))
+	if err != nil {
+		return nil, err
+	}
+
+	return parser.Query(filter)
+}
+
+func printJSON(v interface{}) error {
+	var out []byte
+	var err error
+	if pretty {
+		out, err = json.MarshalIndent(v, "", prettyIndent)
+	} else {
+		out, err = json.Marshal(v)
+	}
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(out))
+	return nil
 }

@@ -13,6 +13,10 @@ func init() {
 	set.Flag("parameter", "set parameter for request").StringMapVar(&parameters)
 	set.Flag("host", "hostname for the service").Default("localhost").Action(usedFlag(&usedHost)).StringVar(&host)
 	set.Flag("port", "port to access the service").Default("80").IntVar(&port)
+	set.Flag("pretty", "pretty print json output").BoolVar(&pretty)
+	set.Flag("pretty-indent", "string to use to indent pretty json").
+		Default("\t").
+		StringVar(&prettyIndent)
 }
 
 func setValues() error {
@@ -46,6 +50,14 @@ func setValues() error {
 		}
 
 		if err := setInt(b, "port", port); err != nil {
+			return err
+		}
+
+		if err := setBool(b, "pretty", pretty); err != nil {
+			return err
+		}
+
+		if err := setString(b, "pretty-indent", prettyIndent); err != nil {
 			return err
 		}
 

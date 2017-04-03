@@ -42,6 +42,13 @@ func requestCommand(cmd *kingpin.CmdClause) {
 		IntVar(&port)
 
 	cmd.Flag("filter", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]'").StringVar(&filter)
+
+	cmd.Flag("pretty", "pretty print json output").BoolVar(&pretty)
+	cmd.Flag("pretty-indent", "string to use to indent pretty json").
+		Default("\t").
+		Action(usedFlag(&usedPrettyIndent)).
+		StringVar(&prettyIndent)
+
 }
 
 func requestDataCommand(cmd *kingpin.CmdClause) {
@@ -67,4 +74,11 @@ func requestDataCommand(cmd *kingpin.CmdClause) {
 		IntVar(&port)
 
 	cmd.Flag("filter", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]'").StringVar(&filter)
+
+	cmd.Flag("pretty", "pretty print json output").BoolVar(&pretty)
+	cmd.Flag("pretty-indent", "string to use to indent pretty json").
+		Default("\t").
+		Action(usedFlag(&usedPrettyIndent)).
+		StringVar(&prettyIndent)
+
 }

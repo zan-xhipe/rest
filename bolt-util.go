@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/boltdb/bolt"
@@ -63,4 +64,22 @@ func setInt(b *bolt.Bucket, key string, value int) error {
 	buf := make([]byte, 4)
 	binary.PutVarint(buf, int64(value))
 	return b.Put([]byte(key), buf)
+}
+
+func setBool(b *bolt.Bucket, key string, value bool) error {
+	return b.Put([]byte(key), []byte(fmt.Sprint(value)))
+}
+
+func getBool(b *bolt.Bucket, key string, value *bool) error {
+	if v := b.Get([]byte(key)); v != nil {
+		p, err := strconv.ParseBool(string(v))
+		if err != nil {
+			return err
+		}
+		if !*value {
+			*value = p
+		}
+	}
+
+	return nil
 }
