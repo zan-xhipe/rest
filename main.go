@@ -211,14 +211,9 @@ func makeRequest(reqType string) (*http.Response, error) {
 		return nil, err
 	}
 
-	rep := make([]string, 0, len(parameters))
-	for key, value := range parameters {
-		rep = append(rep, ":"+key)
-		rep = append(rep, value)
-	}
-	paramReplacer := strings.NewReplacer(rep...)
-
-	u.Path = paramReplacer.Replace(path)
+	params := paramReplacer(parameters)
+	u.Path = params.Replace(path)
+	data = params.Replace(data)
 	if *verbose {
 		fmt.Println(u)
 	}
@@ -276,4 +271,13 @@ func showRequest(r *http.Response) error {
 
 	fmt.Println(string(out))
 	return nil
+}
+
+func paramReplacer(parameters map[string]string) *strings.Replacer {
+	rep := make([]string, 0, len(parameters))
+	for key, value := range parameters {
+		rep = append(rep, ":"+key)
+		rep = append(rep, value)
+	}
+	return strings.NewReplacer(rep...)
 }
