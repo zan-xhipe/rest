@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,7 +14,6 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/elgs/gojq"
 	homedir "github.com/mitchellh/go-homedir"
-
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -80,12 +78,16 @@ func main() {
 	case "get", "post", "put", "delete":
 		resp, err := makeRequest(command)
 		if err != nil {
-			log.Println(err)
+			fmt.Println("error making request:", err)
 			os.Exit(1)
 		}
 
+		if *verbose {
+			fmt.Println(resp.Status)
+		}
+
 		if err := showRequest(resp); err != nil {
-			fmt.Println(err)
+			fmt.Println("error displaying result:", err)
 			os.Exit(1)
 		}
 	}
