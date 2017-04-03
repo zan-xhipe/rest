@@ -40,7 +40,7 @@ func requestCommand(cmd *kingpin.CmdClause) {
 		Action(usedFlag(&usedPort)).
 		IntVar(&port)
 
-	cmd.Flag("query", "pull parts out of the returned json").StringVar(&query)
+	cmd.Flag("query", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]'").StringVar(&query)
 }
 
 func requestDataCommand(cmd *kingpin.CmdClause) {
@@ -64,5 +64,5 @@ func requestDataCommand(cmd *kingpin.CmdClause) {
 		Action(usedFlag(&usedPort)).
 		IntVar(&port)
 
-	cmd.Flag("query", "pull parts out of the returned json").StringVar(&query)
+	cmd.Flag("query", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]'").StringVar(&query)
 }
