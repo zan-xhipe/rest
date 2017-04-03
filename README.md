@@ -23,3 +23,8 @@ You can provide parameters with your request.  Parameters can either be stored i
 rest get users/:userID --parameter userID=1
 {"id": 1, "username": "tester", "full_name": "Test Person"}
 ```
+
+Parameters can also be used in post data.
+```
+rest post users '{"username": ":username", "full_name": "Other Person"}' --parameter username=other
+```
