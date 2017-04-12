@@ -24,34 +24,11 @@ func init() {
 func requestFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("service", "the service to use").StringVar(&requestPath)
 	cmd.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
-	cmd.Flag("header", "set header for request").StringMapVar(&headers)
-	cmd.Flag("parameter", "set parameter for request").StringMapVar(&parameters)
-	cmd.Flag("scheme", "scheme used to access the service").
-		Default("http").
-		Action(usedFlag(&usedScheme)).
-		StringVar(&scheme)
 
-	cmd.Flag("host", "hostname for the service").
-		Default("localhost").
-		Action(usedFlag(&usedHost)).
-		StringVar(&host)
-
-	cmd.Flag("port", "port to access the service").
-		Default("80").
-		Action(usedFlag(&usedPort)).
-		IntVar(&port)
-
-	cmd.Flag("base-path", "base path to use with service").
-		Action(usedFlag(&usedBasePath)).
-		StringVar(&basePath)
+	settings.Flags(cmd)
 
 	cmd.Flag("filter", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]'").StringVar(&filter)
 
-	cmd.Flag("pretty", "pretty print json output").BoolVar(&pretty)
-	cmd.Flag("pretty-indent", "string to use to indent pretty json").
-		Default("\t").
-		Action(usedFlag(&usedPrettyIndent)).
-		StringVar(&prettyIndent)
 }
 
 func requestCommand(cmd *kingpin.CmdClause) {

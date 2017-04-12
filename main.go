@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -25,35 +22,14 @@ var (
 
 	dbFile string
 
-	scheme     string
-	usedScheme bool
-
-	host     string
-	usedHost bool
-
-	port     int
-	usedPort bool
-
-	basePath     string
-	usedBasePath bool
-
 	service     string
 	requestPath string
 	data        string
 	noHeaders   bool
-	headers     map[string]string
 	filter      string
-	parameters  map[string]string
-
-	pretty           bool
-	prettyIndent     string
-	usedPrettyIndent bool
 )
 
 func init() {
-	headers = make(map[string]string)
-	parameters = make(map[string]string)
-
 	use.Arg("service", "the service to use").Required().StringVar(&service)
 
 	dir, err := homedir.Dir()
@@ -145,14 +121,13 @@ func useService() error {
 	return err
 }
 
-func getValues() (*url.URL, error) {
+func getValues() error {
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer db.Close()
 
-	u := url.URL{}
 	err = db.View(func(tx *bolt.Tx) error {
 		b, err := getServiceBucket(tx)
 		if err != nil {
@@ -166,27 +141,25 @@ func getValues() (*url.URL, error) {
 			}
 		}
 
+		stored := Settings{}
+
 		switch {
 		case override:
-			if err := getServiceValues(pb, &u); err != nil {
-				return err
-			}
+			stored.Read(pb)
+			settings = stored.Merge(settings)
 		case pb != nil:
-			if err := getServiceValues(b, &u); err != nil {
-				return err
-			}
-			if err := getServiceValues(pb, &u); err != nil {
-				return err
-			}
+			stored.Read(b)
+			pathStored := Settings{}
+			pathStored.Read(pb)
+			settings = stored.Merge(pathStored).Merge(settings)
 		default:
-			if err := getServiceValues(b, &u); err != nil {
-				return err
-			}
+			stored.Read(b)
+			settings = stored.Merge(settings)
 		}
 		return nil
 	})
 
-	return &u, err
+	return err
 }
 
 func getServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
@@ -230,54 +203,16 @@ func getDefinedPath(b *bolt.Bucket) *bolt.Bucket {
 	return nil
 }
 
-func getServiceValues(b *bolt.Bucket, u *url.URL) error {
-	if usedScheme {
-		u.Scheme = scheme
-	} else {
-		u.Scheme = string(b.Get([]byte("scheme")))
-	}
-
-	hostname := host
-	if !usedHost {
-		hostname = string(b.Get([]byte("host")))
-	}
-
-	if !usedPort {
-		p, err := binary.ReadVarint(bytes.NewReader(b.Get([]byte("port"))))
-		if err != nil {
-			return err
-		}
-		port = int(p)
-	}
-
-	if !usedBasePath {
-		basePath = string(b.Get([]byte("base-path")))
-	}
-
-	u.Host = fmt.Sprintf("%s:%d", hostname, port)
-
-	bucketMap(b.Bucket([]byte("headers")), &headers)
-	bucketMap(b.Bucket([]byte("parameters")), &parameters)
-
-	if err := getBool(b, "pretty", &pretty); err != nil {
-		return err
-	}
-
-	if pretty && !usedPrettyIndent {
-		prettyIndent = string(b.Get([]byte("pretty-indent")))
-	}
-
-	return nil
-}
-
 func makeRequest(reqType string) (*http.Response, error) {
-	u, err := getValues()
+	err := getValues()
 	if err != nil {
 		return nil, err
 	}
 
-	params := paramReplacer(parameters)
-	u.Path = path.Join(basePath, params.Replace(requestPath))
+	u := settings.URL()
+
+	params := paramReplacer(settings.Parameters)
+	u.Path = path.Join(settings.BasePath.String, params.Replace(requestPath))
 	data = params.Replace(data)
 	if *verbose {
 		fmt.Println(u)
@@ -291,7 +226,7 @@ func makeRequest(reqType string) (*http.Response, error) {
 	}
 
 	if !noHeaders {
-		for key, value := range headers {
+		for key, value := range settings.Headers {
 			req.Header.Set(key, value)
 		}
 	}
@@ -322,7 +257,7 @@ func showRequest(r *http.Response) error {
 		if err := printJSON(result); err != nil {
 			return err
 		}
-	case pretty:
+	case settings.Pretty.Bool:
 		var msg json.RawMessage
 		if err := json.Unmarshal(body, &msg); err != nil {
 			return err
@@ -358,8 +293,8 @@ func filterResult(body []byte) (interface{}, error) {
 func printJSON(v interface{}) error {
 	var out []byte
 	var err error
-	if pretty {
-		out, err = json.MarshalIndent(v, "", prettyIndent)
+	if settings.Pretty.Bool {
+		out, err = json.MarshalIndent(v, "", settings.PrettyIndent.String)
 	} else {
 		out, err = json.Marshal(v)
 	}
