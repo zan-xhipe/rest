@@ -45,6 +45,10 @@ func printBucket(b *bolt.Bucket, level int) {
 }
 
 func bucketMap(b *bolt.Bucket, m *map[string]string) {
+	if b == nil {
+		return
+	}
+
 	temp := make(map[string]string)
 	c := b.Cursor()
 	for k, v := c.First(); k != nil; k, v = c.Next() {
