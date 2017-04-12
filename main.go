@@ -72,7 +72,7 @@ func main() {
 	case "version":
 		fmt.Println(versionNumber)
 	case "init":
-		if err := setValues(); err != nil {
+		if err := runInit(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
@@ -152,69 +152,122 @@ func getValues() (*url.URL, error) {
 	}
 	defer db.Close()
 
-	u := &url.URL{}
+	u := url.URL{}
 	err = db.View(func(tx *bolt.Tx) error {
-		info := tx.Bucket([]byte("info"))
-		if info == nil {
-			return ErrNoInfoBucket
-		}
-
-		current := info.Get([]byte("current"))
-		if current == nil {
-			return ErrNoServiceSet
-		}
-
-		serviceBucket := tx.Bucket([]byte("services"))
-		if serviceBucket == nil {
-			return ErrNoServicesBucket
-		}
-
-		b := serviceBucket.Bucket(current)
-		if b == nil {
-			return ErrNoService{Name: string(current)}
-		}
-
-		if usedScheme {
-			u.Scheme = scheme
-		} else {
-			u.Scheme = string(b.Get([]byte("scheme")))
-
-		}
-
-		hostname := host
-		if !usedHost {
-			hostname = string(b.Get([]byte("host")))
-		}
-
-		if !usedPort {
-			p, err := binary.ReadVarint(bytes.NewReader(b.Get([]byte("port"))))
-			if err != nil {
-				return err
-			}
-			port = int(p)
-		}
-
-		if !usedBasePath {
-			basePath = string(b.Get([]byte("base-path")))
-		}
-
-		u.Host = fmt.Sprintf("%s:%d", hostname, port)
-
-		bucketMap(b.Bucket([]byte("headers")), &headers)
-		bucketMap(b.Bucket([]byte("parameters")), &parameters)
-
-		if err := getBool(b, "pretty", &pretty); err != nil {
+		b, err := getServiceBucket(tx)
+		if err != nil {
 			return err
 		}
 
-		if pretty && !usedPrettyIndent {
-			prettyIndent = string(b.Get([]byte("pretty-indent")))
+		pb := getDefinedPath(b)
+		if pb != nil {
+			if err := getBool(pb, "override", &override); err != nil {
+				return err
+			}
 		}
 
+		switch {
+		case override:
+			if err := getServiceValues(pb, &u); err != nil {
+				return err
+			}
+		case pb != nil:
+			if err := getServiceValues(b, &u); err != nil {
+				return err
+			}
+			if err := getServiceValues(pb, &u); err != nil {
+				return err
+			}
+		default:
+			if err := getServiceValues(b, &u); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 
-	return u, err
+	return &u, err
+}
+
+func getServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
+	info := tx.Bucket([]byte("info"))
+	if info == nil {
+		return nil, ErrNoInfoBucket
+	}
+
+	current := info.Get([]byte("current"))
+	if current == nil {
+		return nil, ErrNoServiceSet
+	}
+
+	serviceBucket := tx.Bucket([]byte("services"))
+	if serviceBucket == nil {
+		return nil, ErrNoServicesBucket
+	}
+
+	b := serviceBucket.Bucket(current)
+	if b == nil {
+		return nil, ErrNoService{Name: string(current)}
+	}
+
+	return b, nil
+}
+
+func getDefinedPath(b *bolt.Bucket) *bolt.Bucket {
+	pb := b.Bucket([]byte("paths"))
+	if pb == nil {
+		return nil
+	}
+
+	c := pb.Cursor()
+	for key, _ := c.First(); key != nil; key, _ = c.Next() {
+		// TODO: improve matching
+		if string(key) == requestPath {
+			return pb.Bucket(key)
+		}
+	}
+
+	return nil
+}
+
+func getServiceValues(b *bolt.Bucket, u *url.URL) error {
+	if usedScheme {
+		u.Scheme = scheme
+	} else {
+		u.Scheme = string(b.Get([]byte("scheme")))
+	}
+
+	hostname := host
+	if !usedHost {
+		hostname = string(b.Get([]byte("host")))
+	}
+
+	if !usedPort {
+		p, err := binary.ReadVarint(bytes.NewReader(b.Get([]byte("port"))))
+		if err != nil {
+			return err
+		}
+		port = int(p)
+	}
+
+	if !usedBasePath {
+		basePath = string(b.Get([]byte("base-path")))
+	}
+
+	u.Host = fmt.Sprintf("%s:%d", hostname, port)
+
+	bucketMap(b.Bucket([]byte("headers")), &headers)
+	bucketMap(b.Bucket([]byte("parameters")), &parameters)
+
+	if err := getBool(b, "pretty", &pretty); err != nil {
+		return err
+	}
+
+	if pretty && !usedPrettyIndent {
+		prettyIndent = string(b.Get([]byte("pretty-indent")))
+	}
+
+	return nil
 }
 
 func makeRequest(reqType string) (*http.Response, error) {
