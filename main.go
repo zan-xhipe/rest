@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/boltdb/bolt"
@@ -33,13 +34,16 @@ var (
 	port     int
 	usedPort bool
 
-	service    string
-	path       string
-	data       string
-	noHeaders  bool
-	headers    map[string]string
-	filter     string
-	parameters map[string]string
+	basePath     string
+	usedBasePath bool
+
+	service     string
+	requestPath string
+	data        string
+	noHeaders   bool
+	headers     map[string]string
+	filter      string
+	parameters  map[string]string
 
 	pretty           bool
 	prettyIndent     string
@@ -190,6 +194,10 @@ func getValues() (*url.URL, error) {
 			port = int(p)
 		}
 
+		if !usedBasePath {
+			basePath = string(b.Get([]byte("base-path")))
+		}
+
 		u.Host = fmt.Sprintf("%s:%d", hostname, port)
 
 		bucketMap(b.Bucket([]byte("headers")), &headers)
@@ -216,7 +224,7 @@ func makeRequest(reqType string) (*http.Response, error) {
 	}
 
 	params := paramReplacer(parameters)
-	u.Path = params.Replace(path)
+	u.Path = path.Join(basePath, params.Replace(requestPath))
 	data = params.Replace(data)
 	if *verbose {
 		fmt.Println(u)
