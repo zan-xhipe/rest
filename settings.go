@@ -210,13 +210,13 @@ func writeBool(b *bolt.Bucket, key string, value sql.NullBool) error {
 }
 
 func writeMap(b *bolt.Bucket, key string, data map[string]string) error {
-	for key, value := range data {
+	for k, v := range data {
 		h, err := b.CreateBucketIfNotExists([]byte(key))
 		if err != nil {
 			return err
 		}
 
-		if err := h.Put([]byte(key), []byte(value)); err != nil {
+		if err := h.Put([]byte(k), []byte(v)); err != nil {
 			return err
 		}
 	}
