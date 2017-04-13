@@ -19,6 +19,9 @@ var (
 		Host:         sql.NullString{String: "localhost", Valid: true},
 		Port:         sql.NullInt64{Int64: 80, Valid: true},
 		BasePath:     sql.NullString{String: "", Valid: true},
+		Headers:      make(map[string]string),
+		Parameters:   make(map[string]string),
+		Queries:      make(map[string]string),
 		Pretty:       sql.NullBool{Bool: false, Valid: true},
 		PrettyIndent: sql.NullString{String: "\t", Valid: true},
 	}
