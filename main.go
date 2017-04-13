@@ -26,6 +26,7 @@ var (
 	requestPath string
 	data        string
 	noHeaders   bool
+	noQueries   bool
 	filter      string
 )
 
@@ -141,7 +142,7 @@ func getValues() error {
 			}
 		}
 
-		stored := Settings{}
+		stored := NewSettings()
 
 		switch {
 		case override:
@@ -149,7 +150,7 @@ func getValues() error {
 			settings = stored.Merge(settings)
 		case pb != nil:
 			stored.Read(b)
-			pathStored := Settings{}
+			pathStored := NewSettings()
 			pathStored.Read(pb)
 			settings = stored.Merge(pathStored).Merge(settings)
 		default:
@@ -214,6 +215,15 @@ func makeRequest(reqType string) (*http.Response, error) {
 	params := paramReplacer(settings.Parameters)
 	u.Path = path.Join(settings.BasePath.String, params.Replace(requestPath))
 	data = params.Replace(data)
+
+	if !noQueries {
+		q := u.Query()
+		for key, value := range settings.Queries {
+			q.Set(key, value)
+		}
+		u.RawQuery = q.Encode()
+	}
+
 	if *verbose {
 		fmt.Println(u)
 	}

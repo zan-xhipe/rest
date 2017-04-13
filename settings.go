@@ -32,9 +32,18 @@ type Settings struct {
 
 	Headers    map[string]string
 	Parameters map[string]string
+	Queries    map[string]string
 
 	Pretty       sql.NullBool
 	PrettyIndent sql.NullString
+}
+
+func NewSettings() Settings {
+	return Settings{
+		Headers:    make(map[string]string),
+		Parameters: make(map[string]string),
+		Queries:    make(map[string]string),
+	}
 }
 
 func (s Settings) Merge(other Settings) Settings {
@@ -44,6 +53,7 @@ func (s Settings) Merge(other Settings) Settings {
 	mergeString(&s.BasePath, other.BasePath)
 	mergeMap(s.Headers, other.Headers)
 	mergeMap(s.Parameters, other.Parameters)
+	mergeMap(s.Queries, other.Queries)
 	mergeBool(&s.Pretty, other.Pretty)
 	mergeString(&s.PrettyIndent, other.PrettyIndent)
 
@@ -98,6 +108,8 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause) {
 		StringMapVar(&s.Headers)
 	cmd.Flag("parameter", "set parameter for request").
 		StringMapVar(&s.Parameters)
+	cmd.Flag("query", "set query parameters for request").
+		StringMapVar(&s.Queries)
 
 	cmd.Flag("pretty", "pretty print json output").
 		Action(usedFlag(&s.Pretty.Valid)).
@@ -134,6 +146,10 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
+	if err := writeMap(b, "queries", s.Queries); err != nil {
+		return err
+	}
+
 	if err := writeBool(b, "pretty", s.Pretty); err != nil {
 		return err
 	}
@@ -152,6 +168,7 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	s.BasePath = readString(b, "base-path")
 	bucketMap(b.Bucket([]byte("headers")), &s.Headers)
 	bucketMap(b.Bucket([]byte("parameters")), &s.Parameters)
+	bucketMap(b.Bucket([]byte("Queries")), &s.Queries)
 	s.Pretty = readBool(b, "pretty")
 	s.PrettyIndent = readString(b, "pretty-indent")
 }

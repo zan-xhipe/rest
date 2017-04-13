@@ -15,6 +15,7 @@ func init() {
 	set.Arg("service", "the service to use").Required().StringVar(&service)
 	set.Arg("path", "only apply settings to this path").StringVar(&requestPath)
 
+	settings = NewSettings()
 	settings.Flags(set)
 
 	set.Flag("override-default", "if set then path specific settings completely override service level settings, otherwise the default behaviour is to merge the path settings with base settings, with path settings taking precedent.  This is only valid if a path is specified").BoolVar(&override)

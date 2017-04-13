@@ -24,7 +24,9 @@ func init() {
 func requestFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("service", "the service to use").StringVar(&requestPath)
 	cmd.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
+	cmd.Flag("no-queries", "ignore stored service queries").BoolVar(&noQueries)
 
+	settings = NewSettings()
 	settings.Flags(cmd)
 
 	cmd.Flag("filter", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]'").StringVar(&filter)
