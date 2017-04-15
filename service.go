@@ -24,6 +24,9 @@ func init() {
 
 	settings.Flags(set)
 
+	initSrv.Arg("service", "initialise service").Required().StringVar(&service)
+	settings.Flags(initSrv)
+
 	unset.Arg("service", "the service to use").Required().StringVar(&service)
 	unset.Arg("path", "only apply setting to this path").StringVar(&requestPath)
 	unset.Arg("request", "only apply setting when performing specified request type on path").StringVar(&requestType)
@@ -40,6 +43,47 @@ func init() {
 
 	use.Arg("service", "the service to use").Required().StringVar(&service)
 
+}
+
+func initService() error {
+	db, err := bolt.Open(dbFile, 0600, nil)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	return db.Update(func(tx *bolt.Tx) error {
+		serviceBucket, err := tx.CreateBucketIfNotExists([]byte("services"))
+		if err != nil {
+			return err
+		}
+
+		b, err := serviceBucket.CreateBucketIfNotExists([]byte(service))
+		if err != nil {
+			return err
+		}
+
+		defaultSettings.Merge(settings)
+		settings = defaultSettings
+
+		if err := settings.Write(b); err != nil {
+			return err
+		}
+
+		// if this is the first service to be set then set then also make it current service
+		if info := tx.Bucket([]byte("info")); info == nil {
+			ib, err := tx.CreateBucket([]byte("info"))
+			if err != nil {
+				return err
+			}
+
+			if err := ib.Put([]byte("current"), []byte(service)); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
 func setValue() error {
@@ -63,34 +107,10 @@ func setValue() error {
 
 func setService(db *bolt.DB) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		serviceBucket, err := tx.CreateBucketIfNotExists([]byte("services"))
-		if err != nil {
-			return err
-		}
-
-		b, err := serviceBucket.CreateBucketIfNotExists([]byte(service))
-		if err != nil {
-			return err
-		}
-
-		// ensure that default settings get written
-		defaultSettings.Merge(settings)
-		settings = defaultSettings
+		b := getBucket(tx, fmt.Sprintf("services.%s", service))
 
 		if err := settings.Write(b); err != nil {
 			return err
-		}
-
-		// if this is the first service to be set then set then also make it current service
-		if info := tx.Bucket([]byte("info")); info == nil {
-			ib, err := tx.CreateBucket([]byte("info"))
-			if err != nil {
-				return err
-			}
-
-			if err := ib.Put([]byte("current"), []byte(service)); err != nil {
-				return err
-			}
 		}
 
 		return nil

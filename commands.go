@@ -5,11 +5,12 @@ import kingpin "gopkg.in/alecthomas/kingpin.v2"
 var (
 	_ = kingpin.Command("version", "display version info")
 
-	srv    = kingpin.Command("service", "manage service settings")
-	set    = srv.Command("set", "set a value")
-	unset  = srv.Command("unset", "unset a value")
-	use    = srv.Command("use", "switch service")
-	config = srv.Command("config", "show and alter service configs")
+	srv     = kingpin.Command("service", "manage service settings")
+	initSrv = srv.Command("init", "initialise a service")
+	set     = srv.Command("set", "set a value")
+	unset   = srv.Command("unset", "unset a value")
+	use     = srv.Command("use", "switch service")
+	config  = srv.Command("config", "show and alter service configs")
 
 	get    = kingpin.Command("get", "Perform a GET request")
 	post   = kingpin.Command("post", "Perform a POST request")

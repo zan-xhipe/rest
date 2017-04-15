@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -123,6 +124,9 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause) {
 }
 
 func (s Settings) Write(b *bolt.Bucket) error {
+	if b == nil {
+		return errors.New("no bucket to write to")
+	}
 	if err := writeString(b, "scheme", s.Scheme); err != nil {
 		return err
 	}
