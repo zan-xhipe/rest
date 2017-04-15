@@ -10,6 +10,12 @@ type Request struct {
 }
 
 func (r Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
+	if r.Service == "" {
+		info := tx.Bucket([]byte("info"))
+		current := info.Get([]byte("current"))
+		r.Service = string(current)
+	}
+
 	sb, err := tx.CreateBucketIfNotExists([]byte("services"))
 	if err != nil {
 		return nil, err
