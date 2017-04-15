@@ -139,7 +139,7 @@ func getValues() error {
 	defer db.Close()
 
 	err = db.View(func(tx *bolt.Tx) error {
-		b, err := getServiceBucket(tx)
+		b, err := request.ServiceBucket(tx)
 		if err != nil {
 			return err
 		}
@@ -176,30 +176,6 @@ func getValues() error {
 	})
 
 	return err
-}
-
-func getServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
-	info := tx.Bucket([]byte("info"))
-	if info == nil {
-		return nil, ErrNoInfoBucket
-	}
-
-	current := info.Get([]byte("current"))
-	if current == nil {
-		return nil, ErrNoServiceSet
-	}
-
-	serviceBucket := tx.Bucket([]byte("services"))
-	if serviceBucket == nil {
-		return nil, ErrNoServicesBucket
-	}
-
-	b := serviceBucket.Bucket(current)
-	if b == nil {
-		return nil, ErrNoService{Name: string(current)}
-	}
-
-	return b, nil
 }
 
 func getDefinedPath(b *bolt.Bucket) *bolt.Bucket {
