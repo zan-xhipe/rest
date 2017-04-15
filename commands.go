@@ -27,8 +27,8 @@ func init() {
 
 func requestFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("service", "the service to use").StringVar(&request.Service)
-	cmd.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
-	cmd.Flag("no-queries", "ignore stored service queries").BoolVar(&noQueries)
+	cmd.Flag("no-headers", "ignore stored service headers").BoolVar(&request.NoHeaders)
+	cmd.Flag("no-queries", "ignore stored service queries").BoolVar(&request.NoQueries)
 
 	settings = NewSettings()
 	settings.Flags(cmd)

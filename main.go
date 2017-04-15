@@ -22,10 +22,8 @@ var (
 
 	dbFile string
 
-	request   Request
-	noHeaders bool
-	noQueries bool
-	filter    string
+	request Request
+	filter  string
 )
 
 func init() {
