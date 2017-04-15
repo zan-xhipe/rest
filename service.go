@@ -163,7 +163,7 @@ func unsetService(db *bolt.DB) error {
 			return b.DeleteBucket([]byte(request.Service))
 		}
 
-		return settings.Unset(b)
+		return settings.Unset(b.Bucket([]byte(request.Service)))
 	})
 }
 
@@ -178,7 +178,7 @@ func unsetPath(db *bolt.DB) error {
 			return b.DeleteBucket([]byte(request.Path))
 		}
 
-		return settings.Unset(b)
+		return settings.Unset(b.Bucket([]byte(request.Path)))
 	})
 }
 
@@ -193,6 +193,6 @@ func unsetRequestType(db *bolt.DB) error {
 			return b.Delete([]byte(request.Method))
 		}
 
-		return settings.Unset(b)
+		return settings.Unset(b.Bucket([]byte(request.Method)))
 	})
 }
