@@ -33,7 +33,7 @@ func (r *Request) Prepare() (*http.Request, error) {
 	if !r.NoQueries {
 		q := r.URL.Query()
 		for key, value := range r.Settings.Queries {
-			q.Set(key, value)
+			q.Set(params.Replace(key), params.Replace(value))
 		}
 		r.URL.RawQuery = q.Encode()
 	}
@@ -50,7 +50,7 @@ func (r *Request) Prepare() (*http.Request, error) {
 
 	if !r.NoHeaders {
 		for key, value := range r.Settings.Headers {
-			req.Header.Set(key, value)
+			req.Header.Set(params.Replace(key), params.Replace(value))
 		}
 	}
 
