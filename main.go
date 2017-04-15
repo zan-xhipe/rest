@@ -47,6 +47,11 @@ func main() {
 	switch command {
 	case "version":
 		fmt.Println(versionNumber)
+	case "service init":
+		if err := initService(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	case "service set":
 		if err := setValue(); err != nil {
 			fmt.Println(err)
@@ -70,6 +75,7 @@ func main() {
 		}
 
 	case "get", "post", "put", "delete":
+		requestType = command
 		resp, err := makeRequest(command)
 		if err != nil {
 			fmt.Println("error making request:", err)
@@ -141,8 +147,10 @@ func getValues() error {
 		}
 
 		pb := getDefinedPath(b)
-		rb := pb.Bucket([]byte(requestType))
-
+		var rb *bolt.Bucket
+		if pb != nil {
+			rb = pb.Bucket([]byte(requestType))
+		}
 		// current holds the current command line flags
 		current := settings
 
@@ -150,14 +158,15 @@ func getValues() error {
 		settings = LoadSettings(b)
 
 		switch {
+		// load request type specific settings
+		case rb != nil:
+			s := LoadSettings(pb)
+			settings.Merge(s)
+			s = LoadSettings(rb)
+			settings.Merge(s)
 		// load path specific settings
 		case pb != nil:
 			s := LoadSettings(pb)
-			settings.Merge(s)
-			fallthrough
-			// load request type specific settings
-		case rb != nil:
-			s := LoadSettings(rb)
 			settings.Merge(s)
 		}
 

@@ -140,7 +140,10 @@ func setPath(db *bolt.DB) error {
 
 func setRequestType(db *bolt.DB) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		pb := getBucket(tx, fmt.Sprintf("services.%s.%s", service, requestPath))
+		pb := getBucket(tx, fmt.Sprintf("services.%s.paths.%s", service, requestPath))
+		if pb == nil {
+			return ErrMalformedDB{Bucket: requestPath}
+		}
 		b, err := pb.CreateBucketIfNotExists([]byte(requestType))
 		if err != nil {
 			return err
