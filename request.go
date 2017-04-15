@@ -22,7 +22,7 @@ type Request struct {
 	URL url.URL
 }
 
-func (r Request) Prepare() (*http.Request, error) {
+func (r *Request) Prepare() (*http.Request, error) {
 	// prepare the url
 	r.URL = r.Settings.URL()
 	params := paramReplacer(r.Settings.Parameters)

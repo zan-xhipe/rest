@@ -18,7 +18,7 @@ import (
 var (
 	versionNumber = "0.1"
 
-	verbose = kingpin.Flag("verbose", "Verbose mode").Short('v').Bool()
+	verbLevel int
 
 	dbFile string
 
@@ -29,7 +29,7 @@ var (
 )
 
 func init() {
-
+	kingpin.Flag("verbose", "Verbose mode").Short('v').CounterVar(&verbLevel)
 	dir, err := homedir.Dir()
 	if err != nil {
 		panic(err)
@@ -80,9 +80,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		if *verbose {
-			fmt.Println(resp.Status)
-		}
+		verbose(1, resp.Status)
 
 		if err := showRequest(resp); err != nil {
 			fmt.Println("error displaying result:", err)
@@ -95,6 +93,12 @@ func main() {
 			// so only keep the hundreds
 			os.Exit(resp.StatusCode / 100)
 		}
+	}
+}
+
+func verbose(level int, message string) {
+	if verbLevel >= level {
+		fmt.Println(message)
 	}
 }
 
@@ -148,13 +152,22 @@ func makeRequest() (*http.Response, error) {
 		return nil, err
 	}
 
-	if *verbose {
+	switch verbLevel {
+	case 0:
+	case 1:
+		fmt.Println(request.URL.String())
+	case 2:
+		dump, err := httputil.DumpRequestOut(req, false)
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Print(string(dump))
+	case 3:
 		dump, err := httputil.DumpRequestOut(req, true)
 		if err != nil {
-			return nil, err
+			fmt.Println(err)
 		}
-
-		fmt.Print(string(dump))
+		fmt.Println(string(dump))
 	}
 
 	client := &http.Client{}
