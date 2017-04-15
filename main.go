@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"strings"
 
@@ -148,7 +149,12 @@ func makeRequest() (*http.Response, error) {
 	}
 
 	if *verbose {
-		fmt.Println(request.URL)
+		dump, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Print(string(dump))
 	}
 
 	client := &http.Client{}
