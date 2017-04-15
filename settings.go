@@ -203,16 +203,22 @@ func (s Settings) Unset(b *bolt.Bucket) error {
 		}
 	}
 
-	if err := unsetMapEntry(b, "headers", s.Headers); err != nil {
-		return err
+	if len(s.Headers) != 0 {
+		if err := unsetMapEntry(b, "headers", s.Headers); err != nil {
+			return err
+		}
 	}
 
-	if err := unsetMapEntry(b, "parameters", s.Parameters); err != nil {
-		return err
+	if len(s.Parameters) != 0 {
+		if err := unsetMapEntry(b, "parameters", s.Parameters); err != nil {
+			return err
+		}
 	}
 
-	if err := unsetMapEntry(b, "queries", s.Queries); err != nil {
-		return err
+	if len(s.Queries) != 0 {
+		if err := unsetMapEntry(b, "queries", s.Queries); err != nil {
+			return err
+		}
 	}
 
 	if s.Pretty.Valid {
