@@ -83,7 +83,7 @@ func setValue() error {
 
 	switch {
 	case request.Method != "":
-		err = setRequestType(db)
+		err = setMethod(db)
 	case request.Path != "":
 		err = setPath(db)
 	default:
@@ -123,7 +123,7 @@ func setPath(db *bolt.DB) error {
 	})
 }
 
-func setRequestType(db *bolt.DB) error {
+func setMethod(db *bolt.DB) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := request.MethodBucket(tx)
 		if err != nil {
@@ -146,7 +146,7 @@ func unsetValue() error {
 
 	switch {
 	case request.Method != "":
-		err = unsetRequestType(db)
+		err = unsetMethod(db)
 	case request.Path != "":
 		err = unsetPath(db)
 	default:
@@ -182,7 +182,7 @@ func unsetPath(db *bolt.DB) error {
 	})
 }
 
-func unsetRequestType(db *bolt.DB) error {
+func unsetMethod(db *bolt.DB) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := request.MethodBucket(tx)
 		if err != nil {
