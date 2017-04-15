@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/boltdb/bolt"
@@ -131,107 +130,28 @@ func useService() error {
 	return err
 }
 
-func getValues() error {
+func makeRequest() (*http.Response, error) {
 	db, err := bolt.Open(dbFile, 0600, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer db.Close()
 
-	err = db.View(func(tx *bolt.Tx) error {
-		b, err := request.ServiceBucket(tx)
-		if err != nil {
-			return err
-		}
-
-		pb := getDefinedPath(b)
-		var rb *bolt.Bucket
-		if pb != nil {
-			rb = pb.Bucket([]byte(request.Method))
-		}
-		// current holds the current command line flags
-		current := settings
-
-		// load settings from db
-		settings = LoadSettings(b)
-
-		switch {
-		// load request type specific settings
-		// this has to merge the path specific settings first
-		case rb != nil:
-			s := LoadSettings(pb)
-			settings.Merge(s)
-			s = LoadSettings(rb)
-			settings.Merge(s)
-		// load path specific settings
-		case pb != nil:
-			s := LoadSettings(pb)
-			settings.Merge(s)
-		}
-
-		// apply the current cli flags
-		settings.Merge(current)
-
-		return nil
-	})
-
-	return err
-}
-
-func getDefinedPath(b *bolt.Bucket) *bolt.Bucket {
-	pb := b.Bucket([]byte("paths"))
-	if pb == nil {
-		return nil
-	}
-
-	c := pb.Cursor()
-	for key, _ := c.First(); key != nil; key, _ = c.Next() {
-		// TODO: improve matching
-		if string(key) == request.Path {
-			return pb.Bucket(key)
-		}
-	}
-
-	return nil
-}
-
-func makeRequest() (*http.Response, error) {
-	err := getValues()
-	if err != nil {
+	// retrieve settings from db
+	if err := db.Update(request.LoadSettings); err != nil {
 		return nil, err
 	}
 
-	u := settings.URL()
-
-	params := paramReplacer(settings.Parameters)
-	u.Path = path.Join(settings.BasePath.String, params.Replace(request.Path))
-	request.Data = params.Replace(request.Data)
-
-	if !noQueries {
-		q := u.Query()
-		for key, value := range settings.Queries {
-			q.Set(key, value)
-		}
-		u.RawQuery = q.Encode()
+	req, err := request.Prepare()
+	if err != nil {
+		return nil, err
 	}
 
 	if *verbose {
-		fmt.Println(u)
+		fmt.Println(request.URL)
 	}
 
 	client := &http.Client{}
-
-	req, err := http.NewRequest(strings.ToUpper(request.Method), u.String(), strings.NewReader(request.Data))
-	if err != nil {
-		return nil, err
-	}
-
-	if !noHeaders {
-		for key, value := range settings.Headers {
-			req.Header.Set(key, value)
-		}
-	}
-
 	return client.Do(req)
 }
 
