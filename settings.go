@@ -262,7 +262,7 @@ func writeBool(b *bolt.Bucket, key string, value sql.NullBool) error {
 		return nil
 	}
 
-	return b.Put([]byte(key), []byte(fmt.Sprint(value)))
+	return b.Put([]byte(key), []byte(fmt.Sprint(value.Bool)))
 }
 
 func writeMap(b *bolt.Bucket, key string, data map[string]string) error {
