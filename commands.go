@@ -26,7 +26,7 @@ func init() {
 }
 
 func requestFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("service", "the service to use").StringVar(&requestPath)
+	cmd.Flag("service", "the service to use").StringVar(&request.Service)
 	cmd.Flag("no-headers", "ignore stored service headers").BoolVar(&noHeaders)
 	cmd.Flag("no-queries", "ignore stored service queries").BoolVar(&noQueries)
 
@@ -38,13 +38,13 @@ func requestFlags(cmd *kingpin.CmdClause) {
 }
 
 func requestCommand(cmd *kingpin.CmdClause) {
-	cmd.Arg("path", "url to perform request on").Required().StringVar(&requestPath)
+	cmd.Arg("path", "url to perform request on").Required().StringVar(&request.Path)
 	requestFlags(cmd)
 }
 
 func requestDataCommand(cmd *kingpin.CmdClause) {
-	cmd.Arg("path", "url to perform request on").Required().StringVar(&requestPath)
-	cmd.Arg("data", "data to send in the request").Required().StringVar(&data)
+	cmd.Arg("path", "url to perform request on").Required().StringVar(&request.Path)
+	cmd.Arg("data", "data to send in the request").Required().StringVar(&request.Data)
 
 	requestFlags(cmd)
 }

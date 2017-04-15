@@ -12,7 +12,7 @@ var (
 )
 
 func init() {
-	config.Arg("service", "service to display").StringVar(&service)
+	config.Arg("service", "service to display").StringVar(&request.Service)
 	configKey = config.Arg("key", "specific service setting").String()
 }
 
@@ -25,13 +25,13 @@ func displayConfig() error {
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		switch {
-		case service == "":
+		case request.Service == "":
 			printBucket(tx.Bucket([]byte("info")), 0)
 			printBucket(tx.Bucket([]byte("services")), 0)
 		case *configKey == "":
-			printBucket(getBucket(tx, "services."+service), 0)
+			printBucket(getBucket(tx, "services."+request.Service), 0)
 		default:
-			displayServiceKey(tx, service, *configKey)
+			displayServiceKey(tx, request.Service, *configKey)
 		}
 
 		return nil

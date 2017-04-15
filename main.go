@@ -22,12 +22,10 @@ var (
 
 	dbFile string
 
-	service     string
-	requestPath string
-	data        string
-	noHeaders   bool
-	noQueries   bool
-	filter      string
+	request   Request
+	noHeaders bool
+	noQueries bool
+	filter    string
 )
 
 func init() {
@@ -75,8 +73,8 @@ func main() {
 		}
 
 	case "get", "post", "put", "delete":
-		requestType = command
-		resp, err := makeRequest(command)
+		request.Method = command
+		resp, err := makeRequest()
 		if err != nil {
 			fmt.Println("error making request:", err)
 			os.Exit(1)
@@ -113,8 +111,8 @@ func useService() error {
 			return ErrNoServicesBucket
 		}
 
-		if b := serviceBucket.Bucket([]byte(service)); b == nil {
-			return ErrNoService{Name: service}
+		if b := serviceBucket.Bucket([]byte(request.Service)); b == nil {
+			return ErrNoService{Name: request.Service}
 		}
 
 		info, err := tx.CreateBucketIfNotExists([]byte("info"))
@@ -122,7 +120,7 @@ func useService() error {
 			return err
 		}
 
-		err = info.Put([]byte("current"), []byte(service))
+		err = info.Put([]byte("current"), []byte(request.Service))
 		if err != nil {
 			return err
 		}
@@ -149,7 +147,7 @@ func getValues() error {
 		pb := getDefinedPath(b)
 		var rb *bolt.Bucket
 		if pb != nil {
-			rb = pb.Bucket([]byte(requestType))
+			rb = pb.Bucket([]byte(request.Method))
 		}
 		// current holds the current command line flags
 		current := settings
@@ -159,6 +157,7 @@ func getValues() error {
 
 		switch {
 		// load request type specific settings
+		// this has to merge the path specific settings first
 		case rb != nil:
 			s := LoadSettings(pb)
 			settings.Merge(s)
@@ -212,7 +211,7 @@ func getDefinedPath(b *bolt.Bucket) *bolt.Bucket {
 	c := pb.Cursor()
 	for key, _ := c.First(); key != nil; key, _ = c.Next() {
 		// TODO: improve matching
-		if string(key) == requestPath {
+		if string(key) == request.Path {
 			return pb.Bucket(key)
 		}
 	}
@@ -220,7 +219,7 @@ func getDefinedPath(b *bolt.Bucket) *bolt.Bucket {
 	return nil
 }
 
-func makeRequest(reqType string) (*http.Response, error) {
+func makeRequest() (*http.Response, error) {
 	err := getValues()
 	if err != nil {
 		return nil, err
@@ -229,8 +228,8 @@ func makeRequest(reqType string) (*http.Response, error) {
 	u := settings.URL()
 
 	params := paramReplacer(settings.Parameters)
-	u.Path = path.Join(settings.BasePath.String, params.Replace(requestPath))
-	data = params.Replace(data)
+	u.Path = path.Join(settings.BasePath.String, params.Replace(request.Path))
+	request.Data = params.Replace(request.Data)
 
 	if !noQueries {
 		q := u.Query()
@@ -246,7 +245,7 @@ func makeRequest(reqType string) (*http.Response, error) {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest(strings.ToUpper(reqType), u.String(), strings.NewReader(data))
+	req, err := http.NewRequest(strings.ToUpper(request.Method), u.String(), strings.NewReader(request.Data))
 	if err != nil {
 		return nil, err
 	}

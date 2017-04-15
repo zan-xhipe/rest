@@ -1,16 +1,9 @@
 package main
 
-import (
-	"fmt"
-
-	"github.com/boltdb/bolt"
-)
+import "github.com/boltdb/bolt"
 
 var (
 	settings Settings
-
-	requestType string
-	settingKey  string
 
 	all bool
 )
@@ -18,18 +11,18 @@ var (
 func init() {
 	settings = NewSettings()
 
-	set.Arg("service", "the service to use").Required().StringVar(&service)
-	set.Arg("path", "only apply settings to this path").StringVar(&requestPath)
-	set.Arg("request", "only apply settings when performing specified request type on path").StringVar(&requestType)
+	set.Arg("service", "the service to use").Required().StringVar(&request.Service)
+	set.Arg("path", "only apply settings to this path").StringVar(&request.Path)
+	set.Arg("request", "only apply settings when performing specified request type on path").StringVar(&request.Method)
 
 	settings.Flags(set)
 
-	initSrv.Arg("service", "initialise service").Required().StringVar(&service)
+	initSrv.Arg("service", "initialise service").Required().StringVar(&request.Service)
 	settings.Flags(initSrv)
 
-	unset.Arg("service", "the service to use").Required().StringVar(&service)
-	unset.Arg("path", "only apply setting to this path").StringVar(&requestPath)
-	unset.Arg("request", "only apply setting when performing specified request type on path").StringVar(&requestType)
+	unset.Arg("service", "the service to use").Required().StringVar(&request.Service)
+	unset.Arg("path", "only apply setting to this path").StringVar(&request.Path)
+	unset.Arg("request", "only apply setting when performing specified request type on path").StringVar(&request.Method)
 	unset.Flag("all", "delete entire config bucket").BoolVar(&all)
 	unset.Flag("scheme", "unset scheme").BoolVar(&settings.Scheme.Valid)
 	unset.Flag("host", "unset host").BoolVar(&settings.Host.Valid)
@@ -41,7 +34,7 @@ func init() {
 	unset.Flag("pretty", "unset pretty").BoolVar(&settings.Pretty.Valid)
 	unset.Flag("pretty-indent", "unset Pretty indent").BoolVar(&settings.PrettyIndent.Valid)
 
-	use.Arg("service", "the service to use").Required().StringVar(&service)
+	use.Arg("service", "the service to use").Required().StringVar(&request.Service)
 
 }
 
@@ -53,12 +46,7 @@ func initService() error {
 	defer db.Close()
 
 	return db.Update(func(tx *bolt.Tx) error {
-		serviceBucket, err := tx.CreateBucketIfNotExists([]byte("services"))
-		if err != nil {
-			return err
-		}
-
-		b, err := serviceBucket.CreateBucketIfNotExists([]byte(service))
+		b, err := request.ServiceBucket(tx)
 		if err != nil {
 			return err
 		}
@@ -77,7 +65,7 @@ func initService() error {
 				return err
 			}
 
-			if err := ib.Put([]byte("current"), []byte(service)); err != nil {
+			if err := ib.Put([]byte("current"), []byte(request.Service)); err != nil {
 				return err
 			}
 		}
@@ -94,9 +82,9 @@ func setValue() error {
 	defer db.Close()
 
 	switch {
-	case requestType != "":
+	case request.Method != "":
 		err = setRequestType(db)
-	case requestPath != "":
+	case request.Path != "":
 		err = setPath(db)
 	default:
 		err = setService(db)
@@ -107,7 +95,10 @@ func setValue() error {
 
 func setService(db *bolt.DB) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b := getBucket(tx, fmt.Sprintf("services.%s", service))
+		b, err := request.ServiceBucket(tx)
+		if err != nil {
+			return err
+		}
 
 		if err := settings.Write(b); err != nil {
 			return err
@@ -119,13 +110,7 @@ func setService(db *bolt.DB) error {
 
 func setPath(db *bolt.DB) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		sb := getBucket(tx, fmt.Sprintf("services.%s", service))
-		pb, err := sb.CreateBucketIfNotExists([]byte("paths"))
-		if err != nil {
-			return err
-		}
-
-		b, err := pb.CreateBucketIfNotExists([]byte(requestPath))
+		b, err := request.PathBucket(tx)
 		if err != nil {
 			return err
 		}
@@ -140,11 +125,7 @@ func setPath(db *bolt.DB) error {
 
 func setRequestType(db *bolt.DB) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		pb := getBucket(tx, fmt.Sprintf("services.%s.paths.%s", service, requestPath))
-		if pb == nil {
-			return ErrMalformedDB{Bucket: requestPath}
-		}
-		b, err := pb.CreateBucketIfNotExists([]byte(requestType))
+		b, err := request.MethodBucket(tx)
 		if err != nil {
 			return err
 		}
@@ -164,9 +145,9 @@ func unsetValue() error {
 	}
 
 	switch {
-	case requestType != "":
+	case request.Method != "":
 		err = unsetRequestType(db)
-	case requestPath != "":
+	case request.Path != "":
 		err = unsetPath(db)
 	default:
 		err = unsetService(db)
@@ -179,7 +160,7 @@ func unsetService(db *bolt.DB) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := getBucket(tx, "services")
 		if all {
-			return b.DeleteBucket([]byte(service))
+			return b.DeleteBucket([]byte(request.Service))
 		}
 
 		return settings.Unset(b)
@@ -188,9 +169,13 @@ func unsetService(db *bolt.DB) error {
 
 func unsetPath(db *bolt.DB) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b := getBucket(tx, fmt.Sprintf("services.%s", service))
+		b, err := request.ServiceBucket(tx)
+		if err != nil {
+			return err
+		}
+
 		if all {
-			return b.DeleteBucket([]byte(requestPath))
+			return b.DeleteBucket([]byte(request.Path))
 		}
 
 		return settings.Unset(b)
@@ -199,9 +184,13 @@ func unsetPath(db *bolt.DB) error {
 
 func unsetRequestType(db *bolt.DB) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b := getBucket(tx, fmt.Sprintf("services.%s.%s", service, requestPath))
+		b, err := request.MethodBucket(tx)
+		if err != nil {
+			return err
+		}
+
 		if all {
-			return b.Delete([]byte(requestType))
+			return b.Delete([]byte(request.Method))
 		}
 
 		return settings.Unset(b)
