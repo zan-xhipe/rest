@@ -14,8 +14,6 @@ var (
 func init() {
 	config.Arg("service", "service to display").StringVar(&service)
 	configKey = config.Arg("key", "specific service setting").String()
-	configValue = config.Arg("value", "set the config key to this value").String()
-
 }
 
 func displayConfig() error {
@@ -32,12 +30,8 @@ func displayConfig() error {
 			printBucket(tx.Bucket([]byte("services")), 0)
 		case *configKey == "":
 			printBucket(getBucket(tx, "services."+service), 0)
-		case *configValue == "":
-			displayServiceKey(tx, service, *configKey)
 		default:
-			if err := setConfig(tx, service, *configKey, *configValue); err != nil {
-				return err
-			}
+			displayServiceKey(tx, service, *configKey)
 		}
 
 		return nil
@@ -56,8 +50,4 @@ func displayServiceKey(tx *bolt.Tx, service, key string) {
 	} else {
 		fmt.Println(string(v))
 	}
-}
-
-func setConfig(tx *bolt.Tx, service, key, value string) error {
-	return tx.Bucket([]byte("services")).Bucket([]byte(service)).Put([]byte(key), []byte(value))
 }

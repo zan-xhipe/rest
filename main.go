@@ -31,7 +31,6 @@ var (
 )
 
 func init() {
-	use.Arg("service", "the service to use").Required().StringVar(&service)
 
 	dir, err := homedir.Dir()
 	if err != nil {
@@ -48,17 +47,23 @@ func main() {
 	switch command {
 	case "version":
 		fmt.Println(versionNumber)
-	case "init":
-		if err := runInit(); err != nil {
+	case "service set":
+		if err := setValue(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-	case "use":
+
+	case "service unset":
+		if err := unsetValue(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	case "service use":
 		if err := useService(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-	case "config":
+	case "service config":
 		if err := displayConfig(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -136,27 +141,29 @@ func getValues() error {
 		}
 
 		pb := getDefinedPath(b)
-		if pb != nil {
-			if err := getBool(pb, "override", &override); err != nil {
-				return err
-			}
-		}
+		rb := pb.Bucket([]byte(requestType))
 
-		stored := NewSettings()
+		// current holds the current command line flags
+		current := settings
+
+		// load settings from db
+		settings = LoadSettings(b)
 
 		switch {
-		case override:
-			stored.Read(pb)
-			settings = stored.Merge(settings)
+		// load path specific settings
 		case pb != nil:
-			stored.Read(b)
-			pathStored := NewSettings()
-			pathStored.Read(pb)
-			settings = stored.Merge(pathStored).Merge(settings)
-		default:
-			stored.Read(b)
-			settings = stored.Merge(settings)
+			s := LoadSettings(pb)
+			settings.Merge(s)
+			fallthrough
+			// load request type specific settings
+		case rb != nil:
+			s := LoadSettings(rb)
+			settings.Merge(s)
 		}
+
+		// apply the current cli flags
+		settings.Merge(current)
+
 		return nil
 	})
 

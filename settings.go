@@ -49,7 +49,7 @@ func NewSettings() Settings {
 	}
 }
 
-func (s Settings) Merge(other Settings) Settings {
+func (s *Settings) Merge(other Settings) {
 	mergeString(&s.Scheme, other.Scheme)
 	mergeString(&s.Host, other.Host)
 	mergeInt(&s.Port, other.Port)
@@ -59,8 +59,6 @@ func (s Settings) Merge(other Settings) Settings {
 	mergeMap(s.Queries, other.Queries)
 	mergeBool(&s.Pretty, other.Pretty)
 	mergeString(&s.PrettyIndent, other.PrettyIndent)
-
-	return s
 }
 
 func mergeString(a *sql.NullString, b sql.NullString) {
@@ -176,11 +174,69 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	s.PrettyIndent = readString(b, "pretty-indent")
 }
 
+func (s Settings) Unset(b *bolt.Bucket) error {
+	if s.Scheme.Valid {
+		if err := b.Delete([]byte("scheme")); err != nil {
+			return err
+		}
+	}
+
+	if s.Host.Valid {
+		if err := b.Delete([]byte("host")); err != nil {
+			return err
+		}
+	}
+
+	if s.Port.Valid {
+		if err := b.Delete([]byte("port")); err != nil {
+			return err
+		}
+	}
+
+	if s.BasePath.Valid {
+		if err := b.Delete([]byte("base-path")); err != nil {
+			return err
+		}
+	}
+
+	if err := unsetMapEntry(b, "headers", s.Headers); err != nil {
+		return err
+	}
+
+	if err := unsetMapEntry(b, "parameters", s.Parameters); err != nil {
+		return err
+	}
+
+	if err := unsetMapEntry(b, "queries", s.Queries); err != nil {
+		return err
+	}
+
+	if s.Pretty.Valid {
+		if err := b.Delete([]byte("pretty")); err != nil {
+			return err
+		}
+	}
+
+	if s.PrettyIndent.Valid {
+		if err := b.Delete([]byte("pretty-indent")); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s Settings) URL() url.URL {
 	u := url.URL{}
 	u.Scheme = s.Scheme.String
 	u.Host = fmt.Sprintf("%s:%d", s.Host.String, s.Port.Int64)
 	return u
+}
+
+func LoadSettings(b *bolt.Bucket) Settings {
+	s := NewSettings()
+	s.Read(b)
+	return s
 }
 
 func writeString(b *bolt.Bucket, key string, value sql.NullString) error {
@@ -259,4 +315,19 @@ func readBool(b *bolt.Bucket, key string) sql.NullBool {
 	}
 
 	return sql.NullBool{Bool: p, Valid: true}
+}
+
+func unsetMapEntry(b *bolt.Bucket, key string, entries map[string]string) error {
+	h := b.Bucket([]byte(key))
+	if h == nil {
+		return ErrMalformedDB{Bucket: key}
+	}
+
+	for key := range entries {
+		if err := h.Delete([]byte(key)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
