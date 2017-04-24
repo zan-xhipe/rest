@@ -3,7 +3,7 @@ rest is a command line client for using web services.
 # Usage
 To use a service you first have to initialise it.  This lets you provide the host name, port, scheme, and headers to use when accessing the service.
 ```
-rest service init service-name --host example.com --header Content-Type=application/json
+rest service init <service-name> --host example.com --header Content-Type=application/json
 ```
 
 Once the service has been initialised you can perform common HTTP request on the service.  You should only provide the path you wish to request. GET, POST, PUT, and DELETE are supported.  If the returned data is json formatted then it can be filtered to display only specific parts of the returned data.
@@ -31,7 +31,7 @@ rest post users '{"username": ":username", "full_name": "Other Person"}' --param
 
 You can store parameters with other service settings.
 ```
-rest service set service-name --parameter userID=1
+rest service set <service-name> --parameter userID=1
 rest get users/:userID
 ```
 
