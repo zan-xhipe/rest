@@ -20,6 +20,7 @@ var (
 
 	verbLevel int
 
+	db     *bolt.DB
 	dbFile string
 
 	request Request
@@ -39,6 +40,14 @@ func init() {
 
 func main() {
 	command := kingpin.Parse()
+
+	var err error
+	db, err = bolt.Open(dbFile, 0600, nil)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer db.Close()
 
 	switch command {
 	case "version":
@@ -101,13 +110,7 @@ func verbose(level int, message string) {
 }
 
 func useService() error {
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	err = db.Update(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bolt.Tx) error {
 		serviceBucket := tx.Bucket([]byte("services"))
 		if serviceBucket == nil {
 			return ErrNoServicesBucket
@@ -134,12 +137,6 @@ func useService() error {
 }
 
 func makeRequest() (*http.Response, error) {
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	// retrieve settings from db
 	if err := db.Update(request.LoadSettings); err != nil {
 		return nil, err

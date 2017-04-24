@@ -41,12 +41,6 @@ func init() {
 }
 
 func initService() error {
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := request.ServiceBucket(tx)
 		if err != nil {
@@ -77,25 +71,20 @@ func initService() error {
 }
 
 func setValue() error {
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
+	var err error
 	switch {
 	case request.Method != "":
-		err = setMethod(db)
+		err = setMethod()
 	case request.Path != "":
-		err = setPath(db)
+		err = setPath()
 	default:
-		err = setService(db)
+		err = setService()
 	}
 
 	return err
 }
 
-func setService(db *bolt.DB) error {
+func setService() error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := request.ServiceBucket(tx)
 		if err != nil {
@@ -110,7 +99,7 @@ func setService(db *bolt.DB) error {
 	})
 }
 
-func setPath(db *bolt.DB) error {
+func setPath() error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := request.PathBucket(tx)
 		if err != nil {
@@ -125,7 +114,7 @@ func setPath(db *bolt.DB) error {
 	})
 }
 
-func setMethod(db *bolt.DB) error {
+func setMethod() error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := request.MethodBucket(tx)
 		if err != nil {
@@ -141,24 +130,20 @@ func setMethod(db *bolt.DB) error {
 }
 
 func unsetValue() error {
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		return err
-	}
-
+	var err error
 	switch {
 	case request.Method != "":
-		err = unsetMethod(db)
+		err = unsetMethod()
 	case request.Path != "":
-		err = unsetPath(db)
+		err = unsetPath()
 	default:
-		err = unsetService(db)
+		err = unsetService()
 	}
 
 	return err
 }
 
-func unsetService(db *bolt.DB) error {
+func unsetService() error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := getBucket(tx, "services")
 		if all {
@@ -169,7 +154,7 @@ func unsetService(db *bolt.DB) error {
 	})
 }
 
-func unsetPath(db *bolt.DB) error {
+func unsetPath() error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := request.ServiceBucket(tx)
 		if err != nil {
@@ -184,7 +169,7 @@ func unsetPath(db *bolt.DB) error {
 	})
 }
 
-func unsetMethod(db *bolt.DB) error {
+func unsetMethod() error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := request.MethodBucket(tx)
 		if err != nil {

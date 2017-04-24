@@ -17,13 +17,7 @@ func init() {
 }
 
 func displayConfig() error {
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	err = db.Update(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bolt.Tx) error {
 		switch {
 		case request.Service == "":
 			printBucket(tx.Bucket([]byte("info")), 0)
