@@ -17,6 +17,11 @@ rest get users --filter [0].username
 "tester"
 ```
 
+You can switch between which service to use with
+```
+rest service use <service-name>
+```
+
 # Parameters
 You can provide parameters with your request.  Parameters can either be stored in the service database using init, or provided with the request.  In a request the parameter name is preceded with ":", when storing the ":" is omitted.
 ```
