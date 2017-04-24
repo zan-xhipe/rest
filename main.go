@@ -158,12 +158,14 @@ func makeRequest() (*http.Response, error) {
 		dump, err := httputil.DumpRequestOut(req, false)
 		if err != nil {
 			fmt.Println(err)
+			break
 		}
 		fmt.Print(string(dump))
 	case 3:
 		dump, err := httputil.DumpRequestOut(req, true)
 		if err != nil {
 			fmt.Println(err)
+			break
 		}
 		fmt.Println(string(dump))
 	}
