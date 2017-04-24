@@ -45,6 +45,10 @@ Parameters also work in headers and URL query items
 # Headers
 Providing the right headers is crucial to many requests.  This is also one of the main motivations for creating ```rest``` instead of using ```curl```.
 
+# Filtering
+You can filtered any returned json with a basic filter language, supported by gojq.
+You can also pretty print output with the ```--pretty``` flag.  If you filter the output to a string you can remove the quotes around the string by also providing the pretty flag.
+
 # Storing Settings
 Various settings can be stored for each service you want to use.  Settings can be set per service, per path, or per path access with a particular method.
 

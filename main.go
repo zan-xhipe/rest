@@ -260,6 +260,11 @@ func printJSON(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(out))
+	result := string(out)
+	if settings.Pretty.Bool {
+		result = strings.TrimPrefix(result, "\"")
+		result = strings.TrimSuffix(result, "\"")
+	}
+	fmt.Println(result)
 	return nil
 }

@@ -113,7 +113,7 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause) {
 	cmd.Flag("query", "set query parameters for request").
 		StringMapVar(&s.Queries)
 
-	cmd.Flag("pretty", "pretty print json output").
+	cmd.Flag("pretty", "pretty print json output, removes quotes when filtering").
 		Action(usedFlag(&s.Pretty.Valid)).
 		BoolVar(&s.Pretty.Bool)
 
