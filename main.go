@@ -182,6 +182,25 @@ func usedFlag(b *bool) func(*kingpin.ParseContext) error {
 }
 
 func showRequest(r *http.Response) error {
+	switch verbLevel {
+	case 0:
+	case 1:
+	case 2:
+		dump, err := httputil.DumpResponse(r, false)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+		fmt.Println(string(dump))
+	case 3:
+		dump, err := httputil.DumpResponse(r, true)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+		fmt.Println(string(dump))
+	}
+
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
