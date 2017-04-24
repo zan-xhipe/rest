@@ -48,6 +48,10 @@ func (r *Request) Prepare() (*http.Request, error) {
 		return nil, err
 	}
 
+	if r.Settings.Username.Valid && r.Settings.Password.Valid {
+		req.SetBasicAuth(r.Settings.Username.String, r.Settings.Password.String)
+	}
+
 	if !r.NoHeaders {
 		for key, value := range r.Settings.Headers {
 			req.Header.Set(params.Replace(key), params.Replace(value))

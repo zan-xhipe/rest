@@ -23,6 +23,8 @@ var (
 		Headers:      make(map[string]string),
 		Parameters:   make(map[string]string),
 		Queries:      make(map[string]string),
+		Username:     sql.NullString{String: "", Valid: true},
+		Password:     sql.NullString{String: "", Valid: true},
 		Pretty:       sql.NullBool{Bool: false, Valid: true},
 		PrettyIndent: sql.NullString{String: "\t", Valid: true},
 	}
@@ -37,6 +39,9 @@ type Settings struct {
 	Headers    map[string]string
 	Parameters map[string]string
 	Queries    map[string]string
+
+	Username sql.NullString
+	Password sql.NullString
 
 	Pretty       sql.NullBool
 	PrettyIndent sql.NullString
@@ -58,6 +63,8 @@ func (s *Settings) Merge(other Settings) {
 	mergeMap(s.Headers, other.Headers)
 	mergeMap(s.Parameters, other.Parameters)
 	mergeMap(s.Queries, other.Queries)
+	mergeString(&s.Username, other.Username)
+	mergeString(&s.Password, other.Password)
 	mergeBool(&s.Pretty, other.Pretty)
 	mergeString(&s.PrettyIndent, other.PrettyIndent)
 }
@@ -113,6 +120,13 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause) {
 	cmd.Flag("query", "set query parameters for request").
 		StringMapVar(&s.Queries)
 
+	cmd.Flag("username", "set basic auth username").
+		Action(usedFlag(&s.Username.Valid)).
+		StringVar(&s.Username.String)
+	cmd.Flag("password", "set basic auth password, NOTE: stored in plain text").
+		Action(usedFlag(&s.Password.Valid)).
+		StringVar(&s.Password.String)
+
 	cmd.Flag("pretty", "pretty print json output, removes quotes when filtering").
 		Action(usedFlag(&s.Pretty.Valid)).
 		BoolVar(&s.Pretty.Bool)
@@ -155,6 +169,14 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
+	if err := writeString(b, "username", s.Username); err != nil {
+		return err
+	}
+
+	if err := writeString(b, "password", s.Password); err != nil {
+		return err
+	}
+
 	if err := writeBool(b, "pretty", s.Pretty); err != nil {
 		return err
 	}
@@ -174,6 +196,8 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	bucketMap(b.Bucket([]byte("headers")), &s.Headers)
 	bucketMap(b.Bucket([]byte("parameters")), &s.Parameters)
 	bucketMap(b.Bucket([]byte("Queries")), &s.Queries)
+	s.Username = readString(b, "username")
+	s.Password = readString(b, "password")
 	s.Pretty = readBool(b, "pretty")
 	s.PrettyIndent = readString(b, "pretty-indent")
 }
@@ -217,6 +241,18 @@ func (s Settings) Unset(b *bolt.Bucket) error {
 
 	if len(s.Queries) != 0 {
 		if err := unsetMapEntry(b, "queries", s.Queries); err != nil {
+			return err
+		}
+	}
+
+	if s.Username.Valid {
+		if err := b.Delete([]byte("username")); err != nil {
+			return err
+		}
+	}
+
+	if s.Password.Valid {
+		if err := b.Delete([]byte("password")); err != nil {
 			return err
 		}
 	}

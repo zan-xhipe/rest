@@ -31,6 +31,8 @@ func init() {
 	unset.Flag("header", "unset headers").StringMapVar(&settings.Headers)
 	unset.Flag("parameter", "unset parameters").StringMapVar(&settings.Parameters)
 	unset.Flag("query", "unset query parameters").StringMapVar(&settings.Queries)
+	unset.Flag("username", "unset basic auth username").BoolVar(&settings.Username.Valid)
+	unset.Flag("password", "unset basic auth password").BoolVar(&settings.Password.Valid)
 	unset.Flag("pretty", "unset pretty").BoolVar(&settings.Pretty.Valid)
 	unset.Flag("pretty-indent", "unset Pretty indent").BoolVar(&settings.PrettyIndent.Valid)
 
