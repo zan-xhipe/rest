@@ -37,5 +37,36 @@ rest get users/:userID
 
 Parameters also work in headers and URL query items
 
+# Headers
+Providing the right headers is crucial to many requests.  This is also one of the main motivations for creating ```rest``` instead of using ```curl```.
+
+# Storing Settings
+Various settings can be stored for each service you want to use.  Settings can be set per service, per path, or per path access with a particular method.
+
+Settings are stored in a boltdb database.  The default location is ```~/.restdb.db```
+
+```
+rest service set <service-name> --header "Authorization=Bearer :token"
+rest service set <service-name> <path> --parameter token=tahonteoautnhanu
+rest service set <service-name> <path> <method> --scheme https --port 443
+```
+
+To remove a setting use ```rest service unset```
+
+### scheme
+	How to access the service, default is set to http.
+### host
+	Where the API is hosted, defaults to localhost.
+### port
+	Port to use when accessing the API, defaults to 80.
+### base-path
+	The base path is automatically appended to the host
+### header
+	Headers to send with the request, headers take the form of key=value
+### query
+	Query parameters that are sent with the request, set with key=value
+### parameter
+	Parameters can be substituted in other fields.
+
 # Return Value
 Because rest is intended to be used alongside other command line programs the HTTP response code returned by the service is mapped to a return value.  Any 200 response is mapped to 0, any 300 is mapped 3, 400 to 4, and 500 to 5. Errors resulting from bad input from the cli or errors in the service database return 1.
