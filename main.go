@@ -57,6 +57,11 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+	case "service list":
+		if err := listServices(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	case "service set":
 		if err := setValue(); err != nil {
 			fmt.Println(err)

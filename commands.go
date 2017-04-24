@@ -10,6 +10,7 @@ var (
 	set     = srv.Command("set", "set a value")
 	unset   = srv.Command("unset", "unset a value")
 	use     = srv.Command("use", "switch service")
+	lstSrv  = srv.Command("list", "list all stored services")
 	config  = srv.Command("config", "show and alter service configs")
 
 	get    = kingpin.Command("get", "Perform a GET request")

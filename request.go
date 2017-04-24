@@ -61,7 +61,7 @@ func (r *Request) Prepare() (*http.Request, error) {
 	return req, nil
 }
 
-func (r Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
+func (r *Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	if r.Service == "" {
 		info := tx.Bucket([]byte("info"))
 		current := info.Get([]byte("current"))

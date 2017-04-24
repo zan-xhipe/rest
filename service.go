@@ -1,6 +1,10 @@
 package main
 
-import "github.com/boltdb/bolt"
+import (
+	"fmt"
+
+	"github.com/boltdb/bolt"
+)
 
 var (
 	settings Settings
@@ -11,7 +15,6 @@ var (
 func init() {
 	settings = NewSettings()
 
-	set.Arg("service", "the service to use").Required().StringVar(&request.Service)
 	set.Arg("path", "only apply settings to this path").StringVar(&request.Path)
 	set.Arg("request", "only apply settings when performing specified request type on path").StringVar(&request.Method)
 
@@ -20,7 +23,6 @@ func init() {
 	initSrv.Arg("service", "initialise service").Required().StringVar(&request.Service)
 	settings.Flags(initSrv)
 
-	unset.Arg("service", "the service to use").Required().StringVar(&request.Service)
 	unset.Arg("path", "only apply setting to this path").StringVar(&request.Path)
 	unset.Arg("request", "only apply setting when performing specified request type on path").StringVar(&request.Method)
 	unset.Flag("all", "delete entire config bucket").BoolVar(&all)
@@ -64,6 +66,22 @@ func initService() error {
 			if err := ib.Put([]byte("current"), []byte(request.Service)); err != nil {
 				return err
 			}
+		}
+
+		return nil
+	})
+}
+
+func listServices() error {
+	return db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("services"))
+		if b == nil {
+			return ErrMalformedDB{Bucket: "services"}
+		}
+
+		c := b.Cursor()
+		for key, _ := c.First(); key != nil; key, _ = c.Next() {
+			fmt.Println(string(key))
 		}
 
 		return nil
@@ -145,6 +163,11 @@ func unsetValue() error {
 
 func unsetService() error {
 	return db.Update(func(tx *bolt.Tx) error {
+		_, err := request.ServiceBucket(tx)
+		if err != nil {
+			return err
+		}
+
 		b := getBucket(tx, "services")
 		if all {
 			return b.DeleteBucket([]byte(request.Service))

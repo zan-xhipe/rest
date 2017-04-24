@@ -36,7 +36,7 @@ rest post users '{"username": ":username", "full_name": "Other Person"}' --param
 
 You can store parameters with other service settings.
 ```
-rest service set <service-name> --parameter userID=1
+rest service set --parameter userID=1
 rest get users/:userID
 ```
 
@@ -50,14 +50,14 @@ You can filtered any returned json with a basic filter language, supported by go
 You can also pretty print output with the ```--pretty``` flag.  If you filter the output to a string you can remove the quotes around the string by also providing the pretty flag.
 
 # Storing Settings
-Various settings can be stored for each service you want to use.  Settings can be set per service, per path, or per path access with a particular method.
+Various settings can be stored for each service you want to use.  Settings can be set per path, or per path access with a particular method.  By default settings apply to the current service.
 
 Settings are stored in a boltdb database.  The default location is ```~/.restdb.db```
 
 ```
-rest service set <service-name> --header "Authorization=Bearer :token"
-rest service set <service-name> <path> --parameter token=tahonteoautnhanu
-rest service set <service-name> <path> <method> --scheme https --port 443
+rest service set --header "Authorization=Bearer :token"
+rest service set <path> --parameter token=tahonteoautnhanu
+rest service set <path> <method> --scheme https --port 443
 ```
 
 To remove a setting use ```rest service unset```
