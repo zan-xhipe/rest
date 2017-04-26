@@ -118,20 +118,22 @@ func useService() error {
 	err := db.Update(func(tx *bolt.Tx) error {
 		serviceBucket := tx.Bucket([]byte("services"))
 		if serviceBucket == nil {
-			return ErrNoServicesBucket
+			return ErrInitDB
 		}
 
+		// Check that the service exists
 		if b := serviceBucket.Bucket([]byte(request.Service)); b == nil {
 			return ErrNoService{Name: request.Service}
 		}
 
-		info, err := tx.CreateBucketIfNotExists([]byte("info"))
-		if err != nil {
-			return err
+		info := tx.Bucket([]byte("info"))
+		if info == nil {
+			// If we get here then the db is malformed, examine careully
+			// how it happened.
+			return ErrNoInfoBucket
 		}
 
-		err = info.Put([]byte("current"), []byte(request.Service))
-		if err != nil {
+		if err := info.Put([]byte("current"), []byte(request.Service)); err != nil {
 			return err
 		}
 

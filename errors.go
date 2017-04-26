@@ -30,6 +30,7 @@ func (e ErrInvalidPath) Error() string {
 }
 
 var (
+	ErrInitDB           = errors.New("no services, run service init")
 	ErrNoInfoBucket     = ErrMalformedDB{Bucket: "info"}
 	ErrNoServicesBucket = ErrMalformedDB{Bucket: "services"}
 	ErrNoServiceSet     = errors.New("no current service set")
