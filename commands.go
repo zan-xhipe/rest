@@ -20,12 +20,13 @@ var (
 )
 
 func init() {
-	requestCommand(get)
-	requestDataCommand(post)
-	requestDataCommand(put)
-	requestCommand(delete)
+	requestMethod(get)
+	requestDataMethod(post)
+	requestDataMethod(put)
+	requestMethod(delete)
 }
 
+// requestFlags apply to all the basic request types
 func requestFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("service", "the service to use").StringVar(&request.Service)
 	cmd.Flag("no-headers", "ignore stored service headers").BoolVar(&request.NoHeaders)
@@ -38,12 +39,14 @@ func requestFlags(cmd *kingpin.CmdClause) {
 
 }
 
-func requestCommand(cmd *kingpin.CmdClause) {
+// requestMethod applies to all requests that don't accept a body
+func requestMethod(cmd *kingpin.CmdClause) {
 	cmd.Arg("path", "url to perform request on").Required().StringVar(&request.Path)
 	requestFlags(cmd)
 }
 
-func requestDataCommand(cmd *kingpin.CmdClause) {
+// requestDataMethod applies to all request that accept a body
+func requestDataMethod(cmd *kingpin.CmdClause) {
 	cmd.Arg("path", "url to perform request on").Required().StringVar(&request.Path)
 	cmd.Arg("data", "data to send in the request").Required().StringVar(&request.Data)
 
