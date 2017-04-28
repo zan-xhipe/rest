@@ -68,12 +68,23 @@ func listServices() error {
 			return ErrMalformedDB{Bucket: "services"}
 		}
 
-		c := b.Cursor()
-		for key, _ := c.First(); key != nil; key, _ = c.Next() {
-			fmt.Println(string(key))
+		info := tx.Bucket([]byte("info"))
+		if info == nil {
+			return ErrMalformedDB{Bucket: "info"}
 		}
 
-		return nil
+		current := string(info.Get([]byte("current")))
+
+		return b.ForEach(func(key, _ []byte) error {
+			currentIndicator := " "
+			if string(key) == current {
+				currentIndicator = "*"
+			}
+
+			fmt.Printf("%s %s\n", currentIndicator, key)
+
+			return nil
+		})
 	})
 }
 
