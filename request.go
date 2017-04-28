@@ -109,8 +109,8 @@ func (r *Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	return b, nil
 }
 
-// PathBucket returns the bucket for the request path, creates if needed
-func (r Request) PathBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
+// MakePathBucket creates the bucket for the path
+func (r Request) MakePathBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	s, err := r.ServiceBucket(tx)
 	if err != nil {
 		return nil, err
@@ -124,6 +124,26 @@ func (r Request) PathBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	b, err := pb.CreateBucketIfNotExists([]byte(r.Path))
 	if err != nil {
 		return nil, err
+	}
+
+	return b, nil
+}
+
+// PathBucket returns the bucket for the request path, creates if needed
+func (r Request) PathBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
+	s, err := r.ServiceBucket(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	pb := s.Bucket([]byte("paths"))
+	if pb == nil {
+		return nil, ErrNoPaths
+	}
+
+	b := pb.Bucket([]byte(r.Path))
+	if b == nil {
+		return nil, ErrInvalidPath{Path: r.Path}
 	}
 
 	return b, nil

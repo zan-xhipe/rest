@@ -41,6 +41,7 @@ var (
 	ErrInitDB           = errors.New("no services, run service init")
 	ErrNoInfoBucket     = ErrMalformedDB{Bucket: "info"}
 	ErrNoServicesBucket = ErrMalformedDB{Bucket: "services"}
+	ErrNoPaths          = ErrMalformedDB{Bucket: "paths"}
 	ErrNoServiceSet     = errors.New("no service set, use 'rest service use <service>' to set the current service to use")
 	ErrNoAliases        = errors.New("no aliases defined")
 )

@@ -148,7 +148,7 @@ func setService() error {
 
 func setPath() error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b, err := request.PathBucket(tx)
+		b, err := request.MakePathBucket(tx)
 		if err != nil {
 			return err
 		}
