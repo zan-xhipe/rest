@@ -7,6 +7,7 @@ var (
 
 	srv     = kingpin.Command("service", "manage service settings")
 	initSrv = srv.Command("init", "initialise a service")
+	remSrv  = srv.Command("remove", "remove a service")
 	set     = srv.Command("set", "set a value")
 	unset   = srv.Command("unset", "unset a value")
 	use     = srv.Command("use", "switch service")

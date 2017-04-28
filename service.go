@@ -23,6 +23,8 @@ func init() {
 	initSrv.Arg("service", "initialise service").Required().StringVar(&request.Service)
 	settings.Flags(initSrv)
 
+	remSrv.Arg("service", "remove service").Required().StringVar(&request.Service)
+
 	unset.Arg("key", "the config key to unset, separate levels with '.'").
 		Required().
 		StringVar(&configKey)
@@ -53,6 +55,33 @@ func initService() error {
 			}
 
 			if err := ib.Put([]byte("current"), []byte(request.Service)); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+func removeService() error {
+	return db.Update(func(tx *bolt.Tx) error {
+		services := tx.Bucket([]byte("services"))
+		if services == nil {
+			return ErrMalformedDB{Bucket: "services"}
+		}
+
+		if err := services.DeleteBucket([]byte(request.Service)); err != nil {
+			return err
+		}
+
+		info := tx.Bucket([]byte("info"))
+		if info == nil {
+			return ErrMalformedDB{Bucket: "info"}
+		}
+
+		current := string(info.Get([]byte("current")))
+		if current == request.Service {
+			if err := info.Put([]byte("current"), nil); err != nil {
 				return err
 			}
 		}

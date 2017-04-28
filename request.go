@@ -72,6 +72,10 @@ func (r *Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 		r.Service = string(current)
 	}
 
+	if r.Service == "" {
+		return nil, ErrNoServiceSet
+	}
+
 	sb, err := tx.CreateBucketIfNotExists([]byte("services"))
 	if err != nil {
 		return nil, err
