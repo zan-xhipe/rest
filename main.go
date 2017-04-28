@@ -154,6 +154,7 @@ func makeRequest() (*http.Response, error) {
 		return nil, err
 	}
 
+	// verbose, verbose logging
 	switch verbLevel {
 	case 0:
 	case 1:
@@ -165,6 +166,7 @@ func makeRequest() (*http.Response, error) {
 			break
 		}
 		fmt.Print(string(dump))
+		// this level might nee to be rethought, see if it's actually usefull
 	case 3:
 		dump, err := httputil.DumpRequestOut(req, true)
 		if err != nil {
@@ -186,6 +188,7 @@ func usedFlag(b *bool) func(*kingpin.ParseContext) error {
 }
 
 func showRequest(r *http.Response) error {
+	// verbose, verbose logging
 	switch verbLevel {
 	case 0:
 	case 1:
@@ -212,6 +215,7 @@ func showRequest(r *http.Response) error {
 	}
 
 	switch {
+	// filtered result
 	case filter != "":
 		result, err := filterResult(body)
 		if err != nil {
@@ -220,6 +224,7 @@ func showRequest(r *http.Response) error {
 		if err := printJSON(result); err != nil {
 			return err
 		}
+	// pretty result
 	case settings.Pretty.Bool:
 		var msg json.RawMessage
 		if err := json.Unmarshal(body, &msg); err != nil {
@@ -228,6 +233,7 @@ func showRequest(r *http.Response) error {
 		if err := printJSON(msg); err != nil {
 			return err
 		}
+	// unaltered result
 	default:
 		fmt.Println(string(body))
 	}
@@ -253,6 +259,7 @@ func filterResult(body []byte) (interface{}, error) {
 	return parser.Query(filter)
 }
 
+// printJSON pretty prints json when it's set
 func printJSON(v interface{}) error {
 	var out []byte
 	var err error
@@ -265,10 +272,17 @@ func printJSON(v interface{}) error {
 		return err
 	}
 	result := string(out)
+
+	// the pretty flag removes quotes from results, this was added for
+	// filtered results to make them easier to work with, so you can
+	// directly put them into a parameter or header without doing your
+	// own trimming. This should be changed if a better UI for this
+	// behaviour is figured out.
 	if settings.Pretty.Bool {
 		result = strings.TrimPrefix(result, "\"")
 		result = strings.TrimSuffix(result, "\"")
 	}
+
 	fmt.Println(result)
 	return nil
 }

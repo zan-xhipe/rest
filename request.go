@@ -22,6 +22,8 @@ type Request struct {
 	URL url.URL
 }
 
+// Prepare the http request.  This will substitute all the parameters,
+// addd all the headers and query parameters
 func (r *Request) Prepare() (*http.Request, error) {
 	// prepare the url
 	r.URL = r.Settings.URL()
@@ -61,6 +63,7 @@ func (r *Request) Prepare() (*http.Request, error) {
 	return req, nil
 }
 
+// ServiceBucket returns the db bucket for the requests service
 func (r *Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	if r.Service == "" {
 		info := tx.Bucket([]byte("info"))
@@ -81,6 +84,7 @@ func (r *Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	return b, nil
 }
 
+// PathBucket returns the bucket for the request path, creates if needed
 func (r Request) PathBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	s, err := r.ServiceBucket(tx)
 	if err != nil {
@@ -100,6 +104,7 @@ func (r Request) PathBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	return b, nil
 }
 
+// MethodBucket returns the bucket for the request method, creates if needed
 func (r Request) MethodBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	s, err := r.PathBucket(tx)
 	if err != nil {
@@ -114,12 +119,14 @@ func (r Request) MethodBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	return b, nil
 }
 
+// LoadSettings from the database
 func (r *Request) LoadSettings(tx *bolt.Tx) error {
 	sb, pb, mb, err := request.Match(tx)
 	if err != nil {
 		return err
 	}
 
+	// Start with blank settings
 	r.Settings = NewSettings()
 
 	// no service based settings
@@ -149,6 +156,7 @@ func (r *Request) LoadSettings(tx *bolt.Tx) error {
 	return nil
 }
 
+// Match returns the relavant db buckets for all requst settings
 func (r Request) Match(tx *bolt.Tx) (service, path, method *bolt.Bucket, err error) {
 	service, err = r.ServiceBucket(tx)
 	if err != nil {
@@ -160,6 +168,9 @@ func (r Request) Match(tx *bolt.Tx) (service, path, method *bolt.Bucket, err err
 		return service, nil, nil, nil
 	}
 
+	// Match the path, this will eventually be expanded to better match
+	// the path.  So specific paths will be matched before generic ones
+	// at the moment it requires an exact match
 	c := pb.Cursor()
 	for key, _ := c.First(); key != nil; key, _ = c.Next() {
 		if string(key) == r.Path {

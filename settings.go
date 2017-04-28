@@ -40,13 +40,16 @@ type Settings struct {
 	Parameters map[string]string
 	Queries    map[string]string
 
+	// basic auth
 	Username sql.NullString
 	Password sql.NullString
 
+	// output
 	Pretty       sql.NullBool
 	PrettyIndent sql.NullString
 }
 
+// NewSettings returns a initialised settings struct
 func NewSettings() Settings {
 	return Settings{
 		Headers:    make(map[string]string),
@@ -55,6 +58,7 @@ func NewSettings() Settings {
 	}
 }
 
+// Merge the provided settings into calling settings struct
 func (s *Settings) Merge(other Settings) {
 	mergeString(&s.Scheme, other.Scheme)
 	mergeString(&s.Host, other.Host)
@@ -93,6 +97,7 @@ func mergeMap(a, b map[string]string) {
 	}
 }
 
+// Flags attach all the settings flags to a command
 func (s *Settings) Flags(cmd *kingpin.CmdClause) {
 	cmd.Flag("scheme", "scheme used to access the service").
 		Default(defaultSettings.Scheme.String).
@@ -137,6 +142,7 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause) {
 		StringVar(&s.PrettyIndent.String)
 }
 
+// Write settings to the database
 func (s Settings) Write(b *bolt.Bucket) error {
 	if b == nil {
 		return errors.New("no bucket to write to")
@@ -188,6 +194,7 @@ func (s Settings) Write(b *bolt.Bucket) error {
 	return nil
 }
 
+// Read the settings from the database
 func (s *Settings) Read(b *bolt.Bucket) {
 	s.Scheme = readString(b, "scheme")
 	s.Host = readString(b, "host")
@@ -202,6 +209,7 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	s.PrettyIndent = readString(b, "pretty-indent")
 }
 
+// Unset the database
 func (s Settings) Unset(b *bolt.Bucket) error {
 	if s.Scheme.Valid {
 		if err := b.Delete([]byte("scheme")); err != nil {
@@ -272,6 +280,7 @@ func (s Settings) Unset(b *bolt.Bucket) error {
 	return nil
 }
 
+// URL for the service
 func (s Settings) URL() url.URL {
 	u := url.URL{}
 	u.Scheme = s.Scheme.String
@@ -279,6 +288,7 @@ func (s Settings) URL() url.URL {
 	return u
 }
 
+// LoadSettings from the database
 func LoadSettings(b *bolt.Bucket) Settings {
 	s := NewSettings()
 	s.Read(b)
