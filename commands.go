@@ -27,6 +27,10 @@ func init() {
 	requestDataMethod(post)
 	requestDataMethod(put)
 	requestMethod(delete)
+
+	perform.Arg("data", "data to send in the request").
+		StringVar(&request.Data)
+	requestFlags(perform)
 }
 
 // requestFlags apply to all the basic request types
