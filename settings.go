@@ -16,9 +16,9 @@ import (
 
 var (
 	defaultSettings = Settings{
-		Scheme:       sql.NullString{String: "http", Valid: true},
+		Scheme:       sql.NullString{String: "https", Valid: true},
 		Host:         sql.NullString{String: "localhost", Valid: true},
-		Port:         sql.NullInt64{Int64: 80, Valid: true},
+		Port:         sql.NullInt64{Int64: 443, Valid: true},
 		BasePath:     sql.NullString{String: "", Valid: true},
 		Headers:      make(map[string]string),
 		Parameters:   make(map[string]string),

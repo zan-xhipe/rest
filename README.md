@@ -66,17 +66,17 @@ To view your setting for the current service use ```rest service config```
 ```
 rest service set --header "Authorization=Bearer :token"
 rest service set <path> --parameter token=tahonteoautnhanu
-rest service set <path> <method> --scheme https --port 443
+rest service set <path> <method> --scheme http --port 80
 ```
 
 To remove a setting use ```rest service unset``` followed by the key to unset.  The key is a hierarchy that is '.' separated.  This lets you easily remove entire buckets, or individual settings e.g. ```rest service unset paths.users.get``` to unset a method specific setting, or ```rest service unset paths``` to remove all your path specific settings.
 
 ### scheme
-	How to access the service, default is set to http.
+	How to access the service, default is set to https.
 ### host
 	Where the API is hosted, defaults to localhost.
 ### port
-	Port to use when accessing the API, defaults to 80.
+	Port to use when accessing the API, defaults to 443.
 ### base-path
 	The base path is automatically appended to the host
 ### header
@@ -99,8 +99,6 @@ Most of this setup could be done in the init command.  It is done as it is for i
 
 ```
 rest service init github \
-	--scheme https \
-	--port 443
 	--host api.github.com \
 	--header Accept=application/vnd.github.v3+json
 rest service use github
