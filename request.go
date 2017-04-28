@@ -129,28 +129,22 @@ func (r *Request) LoadSettings(tx *bolt.Tx) error {
 	// Start with blank settings
 	r.Settings = NewSettings()
 
-	// no service based settings
-	if sb == nil {
-		r.Settings.Merge(settings)
-		return nil
+	// load service settings
+	if sb != nil {
+		r.Settings = LoadSettings(sb)
 	}
 
-	// load service settings as base
-	r.Settings = LoadSettings(sb)
-
-	if pb == nil {
-		r.Settings.Merge(settings)
-		return nil
+	// load path settings
+	if pb != nil {
+		r.Settings.Merge(LoadSettings(pb))
 	}
 
-	r.Settings.Merge(LoadSettings(pb))
-
-	if mb == nil {
-		r.Settings.Merge(settings)
-		return nil
+	// load method settings
+	if mb != nil {
+		r.Settings.Merge(LoadSettings(mb))
 	}
 
-	r.Settings.Merge(LoadSettings(mb))
+	// load provided cli flags settings
 	r.Settings.Merge(settings)
 
 	return nil
