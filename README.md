@@ -1,5 +1,8 @@
 rest is a command line client for using web services.
 
+to get it run
+```go get -u github.com/zan-xhipe/rest```
+
 # Usage
 To use a service you first have to initialise it.  This lets you provide the host name, port, scheme, and headers to use when accessing the service.
 ```
@@ -85,3 +88,42 @@ To remove a setting use ```rest service unset``` followed by the key to unset.  
 
 # Return Value
 Because rest is intended to be used alongside other command line programs the HTTP response code returned by the service is mapped to a return value.  Any 200 response is mapped to 0, any 300 is mapped 3, 400 to 4, and 500 to 5. Errors resulting from bad input from the cli or errors in the service database return 1.
+
+# Example
+## Github
+Github requires that you provide the accept header for the version of the API. ```$GITHUB_AUTH_TOKEN``` is a developer token.  We store the github username in ```$GITHUB_USER``` so that it can be set as a parameter.
+
+Note the quotes when setting the authorization token, if we don't provide this it will split the header on the space and you will end up creating a path setting named after your token with a Authorization header that only contains ```token```.
+
+Most of this setup could be done in the init command.  It is done as it is for illustrative proposes.
+
+```
+rest service init github \
+	--scheme https \
+	--port 443
+	--host api.github.com \
+	--header Accept=application/vnd.github.v3+json
+rest service use github
+rest service set --header Authorization="token $GITHUB_AUTH_TOKEN"
+GITHUB_USER=$(rest get user --pretty --filter login)
+rest service set --parameter user="$GITHUB_USER"
+```
+
+Retrieve information about yourself
+```
+rest get user
+```
+
+Retrieve all your repos
+```
+rest service alias repos get users/:user/repos
+rest perform repos --pretty
+```
+
+# Todo
+- Allow setting parameters from the filtered output of a request
+- Make aliases first class commands instead of hiding them behind perform
+- Figure out how to interact sensibly with hypermedia
+
+# Motivation
+This is mostly a tool to help me explore the APIs of various services that I intend to use, and interactively test the APIs I create for work.  Thus if there is anything missing it is because I have not had a need for it yet.  If you find this tool useful, great.  Issues and Pull Requests welcome.
