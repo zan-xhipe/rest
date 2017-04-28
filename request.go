@@ -149,8 +149,8 @@ func (r Request) PathBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	return b, nil
 }
 
-// MethodBucket returns the bucket for the request method, creates if needed
-func (r Request) MethodBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
+// MakeMethodBucket returns the bucket for the request method, creates if needed
+func (r Request) MakeMethodBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	s, err := r.PathBucket(tx)
 	if err != nil {
 		return nil, err

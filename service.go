@@ -163,7 +163,7 @@ func setPath() error {
 
 func setMethod() error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b, err := request.MethodBucket(tx)
+		b, err := request.MakeMethodBucket(tx)
 		if err != nil {
 			return err
 		}
