@@ -17,10 +17,9 @@ rest get users --filter [0].username
 "tester"
 ```
 
-You can switch between which service to use with
-```
-rest service use <service-name>
-```
+To list all your services use ```rest service list```
+
+You can switch between which service to use with ```rest service use <service-name>```
 
 # Aliases
 You can set an alias for a specific call with ```rest service alias <name> <method> <path>``` you can then use ```rest perform <name> [<data>]``` to call the aliased path with the specified method.  This will use any path and method specific settings that you may have previously set.
@@ -58,6 +57,8 @@ You can also pretty print output with the ```--pretty``` flag.  If you filter th
 Various settings can be stored for each service you want to use.  Settings can be set per path, or per path access with a particular method.  By default settings apply to the current service.
 
 Settings are stored in a boltdb database.  The default location is ```~/.restdb.db```
+
+To view your setting for the current service use ```rest service config```
 
 ```
 rest service set --header "Authorization=Bearer :token"
