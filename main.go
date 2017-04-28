@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	versionNumber = "0.1"
+	versionNumber = "0.2"
 
 	verbLevel int
 
@@ -83,28 +83,40 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+	case "service alias":
+		if err := addAlias(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 
 	case "get", "post", "put", "delete":
-		request.Method = command
-		resp, err := makeRequest()
-		if err != nil {
-			fmt.Println("error making request:", err)
-			os.Exit(1)
-		}
+		Do(command)
 
-		verbose(1, resp.Status)
+	case "perform":
+		Perform()
+	}
+}
 
-		if err := showRequest(resp); err != nil {
-			fmt.Println("error displaying result:", err)
-			os.Exit(1)
-		}
+func Do(command string) {
+	request.Method = command
+	resp, err := makeRequest()
+	if err != nil {
+		fmt.Println("error making request:", err)
+		os.Exit(1)
+	}
 
-		// exit non zero if not a 200 response
-		if resp.StatusCode < 200 || resp.StatusCode > 300 {
-			// if the exit value gets too high it gets mangled
-			// so only keep the hundreds
-			os.Exit(resp.StatusCode / 100)
-		}
+	verbose(1, resp.Status)
+
+	if err := showRequest(resp); err != nil {
+		fmt.Println("error displaying result:", err)
+		os.Exit(1)
+	}
+
+	// exit non zero if not a 200 response
+	if resp.StatusCode < 200 || resp.StatusCode > 300 {
+		// if the exit value gets too high it gets mangled
+		// so only keep the hundreds
+		os.Exit(resp.StatusCode / 100)
 	}
 }
 

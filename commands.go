@@ -12,11 +12,14 @@ var (
 	use     = srv.Command("use", "switch service")
 	lstSrv  = srv.Command("list", "list all stored services")
 	config  = srv.Command("config", "show and alter service configs")
+	action  = srv.Command("alias", "set an action")
 
 	get    = kingpin.Command("get", "Perform a GET request")
 	post   = kingpin.Command("post", "Perform a POST request")
 	put    = kingpin.Command("put", "Perform a PUT request")
 	delete = kingpin.Command("delete", "Perform a DELETE request")
+
+	perform = kingpin.Command("perform", "Perform a predifined action")
 )
 
 func init() {

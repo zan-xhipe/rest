@@ -29,9 +29,18 @@ func (e ErrInvalidPath) Error() string {
 	return fmt.Sprintf("path %s not valid", e.Path)
 }
 
+type ErrNoAlias struct {
+	Alias string
+}
+
+func (e ErrNoAlias) Error() string {
+	return fmt.Sprintf("no alias %s defined", e.Alias)
+}
+
 var (
 	ErrInitDB           = errors.New("no services, run service init")
 	ErrNoInfoBucket     = ErrMalformedDB{Bucket: "info"}
 	ErrNoServicesBucket = ErrMalformedDB{Bucket: "services"}
 	ErrNoServiceSet     = errors.New("no current service set")
+	ErrNoAliases        = errors.New("no aliases defined")
 )

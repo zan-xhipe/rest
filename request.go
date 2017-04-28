@@ -64,6 +64,7 @@ func (r *Request) Prepare() (*http.Request, error) {
 }
 
 // ServiceBucket returns the db bucket for the requests service
+// TODO: seperate a versio of this for just viewing
 func (r *Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	if r.Service == "" {
 		info := tx.Bucket([]byte("info"))
