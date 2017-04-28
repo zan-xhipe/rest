@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"database/sql"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"net/url"
@@ -308,9 +306,7 @@ func writeInt(b *bolt.Bucket, key string, value sql.NullInt64) error {
 		return nil
 	}
 
-	buf := make([]byte, 4)
-	binary.PutVarint(buf, value.Int64)
-	return b.Put([]byte(key), buf)
+	return b.Put([]byte(key), []byte(strconv.Itoa(int(value.Int64))))
 }
 
 func writeBool(b *bolt.Bucket, key string, value sql.NullBool) error {
@@ -351,12 +347,12 @@ func readInt(b *bolt.Bucket, key string) sql.NullInt64 {
 		return sql.NullInt64{}
 	}
 
-	p, err := binary.ReadVarint(bytes.NewReader(v))
+	p, err := strconv.Atoi(string(v))
 	if err != nil {
 		return sql.NullInt64{}
 	}
 
-	return sql.NullInt64{Int64: p, Valid: true}
+	return sql.NullInt64{Int64: int64(p), Valid: true}
 }
 
 func readBool(b *bolt.Bucket, key string) sql.NullBool {
