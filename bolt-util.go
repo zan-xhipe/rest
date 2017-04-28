@@ -30,6 +30,36 @@ func getBucket(tx *bolt.Tx, path string) *bolt.Bucket {
 	return b
 }
 
+func unsetBucket(b *bolt.Bucket, key string) error {
+	p := strings.Split(key, ".")
+	if len(p) < 1 {
+		return nil
+	}
+
+	for i := range p {
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			if string(k) == p[i] {
+				// leaf
+				if v != nil {
+					return b.Delete(k)
+				}
+
+				// we are deleting the bucket
+				if i == len(p)-1 {
+					return b.DeleteBucket(k)
+				}
+
+				// go deeper
+				b = b.Bucket(k)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 func printBucket(b *bolt.Bucket, level int) {
 	padding := strings.Repeat(" ", level*4)
 	c := b.Cursor()

@@ -7,12 +7,12 @@ import (
 )
 
 var (
-	configKey   *string
+	configKey   string
 	configValue *string
 )
 
 func init() {
-	configKey = config.Arg("key", "specific service setting").String()
+	config.Arg("key", "specific service setting").StringVar(&configKey)
 }
 
 func displayConfig() error {
@@ -22,8 +22,8 @@ func displayConfig() error {
 			return err
 		}
 
-		if *configKey != "" {
-			displayServiceKey(b, request.Service, *configKey)
+		if configKey != "" {
+			displayServiceKey(b, request.Service, configKey)
 		} else {
 			fmt.Println(request.Service)
 			printBucket(b, 1)

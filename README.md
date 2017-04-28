@@ -60,7 +60,7 @@ rest service set <path> --parameter token=tahonteoautnhanu
 rest service set <path> <method> --scheme https --port 443
 ```
 
-To remove a setting use ```rest service unset```
+To remove a setting use ```rest service unset``` followed by the key to unset.  The key is a hierarchy that is '.' separated.  This lets you easily remove entire buckets, or individual settings e.g. ```rest service unset paths.users.get``` to unset a method specific setting, or ```rest service unset paths``` to remove all your path specific settings.
 
 ### scheme
 	How to access the service, default is set to http.
