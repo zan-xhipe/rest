@@ -35,7 +35,7 @@ func init() {
 
 func initService() error {
 	return db.Update(func(tx *bolt.Tx) error {
-		b, err := request.ServiceBucket(tx)
+		b, err := request.MakeServiceBucket(tx)
 		if err != nil {
 			return err
 		}

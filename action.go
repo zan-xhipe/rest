@@ -53,7 +53,7 @@ func addAlias() error {
 }
 
 func Perform() {
-	err := db.Update(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bolt.Tx) error {
 		sb, err := request.ServiceBucket(tx)
 		if err != nil {
 			return err

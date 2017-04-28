@@ -63,8 +63,28 @@ func (r *Request) Prepare() (*http.Request, error) {
 	return req, nil
 }
 
-// ServiceBucket returns the db bucket for the requests service
-// TODO: seperate a versio of this for just viewing
+// MakeServiceBucket creates the bucket for the service
+func (r *Request) MakeServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
+	if r.Service == "" {
+		info := tx.Bucket([]byte("info"))
+		current := info.Get([]byte("current"))
+		r.Service = string(current)
+	}
+
+	sb, err := tx.CreateBucketIfNotExists([]byte("services"))
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := sb.CreateBucketIfNotExists([]byte(r.Service))
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+// ServiceBucket retrieves the bucket for the current requests service
 func (r *Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	if r.Service == "" {
 		info := tx.Bucket([]byte("info"))
@@ -76,14 +96,14 @@ func (r *Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 		return nil, ErrNoServiceSet
 	}
 
-	sb, err := tx.CreateBucketIfNotExists([]byte("services"))
-	if err != nil {
-		return nil, err
+	sb := tx.Bucket([]byte("services"))
+	if sb == nil {
+		return nil, ErrNoServicesBucket
 	}
 
-	b, err := sb.CreateBucketIfNotExists([]byte(r.Service))
-	if err != nil {
-		return nil, err
+	b := sb.Bucket([]byte(r.Service))
+	if b == nil {
+		return nil, ErrNoService{Name: r.Service}
 	}
 
 	return b, nil

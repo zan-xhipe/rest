@@ -16,7 +16,7 @@ func init() {
 }
 
 func displayConfig() error {
-	return db.Update(func(tx *bolt.Tx) error {
+	return db.View(func(tx *bolt.Tx) error {
 		b, err := request.ServiceBucket(tx)
 		if err != nil {
 			return err
