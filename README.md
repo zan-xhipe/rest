@@ -22,6 +22,11 @@ You can switch between which service to use with
 rest service use <service-name>
 ```
 
+# Aliases
+You can set an alias for a specific call with ```rest service alias <name> <method> <path>``` you can then use ```rest perform <name> [<data>]``` to call the aliased path with the specified method.  This will use any path and method specific settings that you may have previously set.
+
+This can be very useful to save actions that you perform often.  Combining this with parameters is especially useful in turning rest into a client for the service.
+
 # Parameters
 You can provide parameters with your request.  Parameters can either be stored in the service database using init, or provided with the request.  In a request the parameter name is preceded with ":", when storing the ":" is omitted.
 ```
