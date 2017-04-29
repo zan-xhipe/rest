@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"path"
 	"strings"
@@ -20,6 +22,41 @@ type Request struct {
 	NoHeaders bool
 
 	URL url.URL
+
+	verbose int
+}
+
+func (r *Request) Perform() (*http.Response, error) {
+	if err := db.Update(request.LoadSettings); err != nil {
+		return nil, err
+	}
+
+	req, err := r.Prepare()
+	if err != nil {
+		return nil, err
+	}
+
+	switch r.verbose {
+	case 1:
+		fmt.Println(request.URL.String())
+	case 2, 3:
+		// at level 3 display the raw request
+		extra := false
+		if r.verbose >= 3 {
+			extra = true
+		}
+
+		dump, err := httputil.DumpRequestOut(req, extra)
+		if err != nil {
+			// this is only the verbose logging, so carry on in case of error
+			fmt.Println(err)
+			break
+		}
+		fmt.Println(string(dump))
+	}
+
+	client := &http.Client{}
+	return client.Do(req)
 }
 
 // Prepare the http request.  This will substitute all the parameters,

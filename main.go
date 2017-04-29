@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/httputil"
 	"os"
 	"strings"
 
@@ -102,7 +100,9 @@ func main() {
 // Do perform the request, display the response, and exit.
 func Do(command string) {
 	request.Method = command
-	resp, err := makeRequest()
+	request.verbose = verbLevel
+
+	resp, err := request.Perform()
 	if err != nil {
 		fmt.Println("error making request:", err)
 		os.Exit(1)
@@ -146,43 +146,6 @@ func useService() error {
 	})
 
 	return err
-}
-
-func makeRequest() (*http.Response, error) {
-	// retrieve settings from db
-	if err := db.Update(request.LoadSettings); err != nil {
-		return nil, err
-	}
-
-	req, err := request.Prepare()
-	if err != nil {
-		return nil, err
-	}
-
-	// verbose, verbose logging
-	switch verbLevel {
-	case 0:
-	case 1:
-		fmt.Println(request.URL.String())
-	case 2:
-		dump, err := httputil.DumpRequestOut(req, false)
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
-		fmt.Print(string(dump))
-		// this level might nee to be rethought, see if it's actually usefull
-	case 3:
-		dump, err := httputil.DumpRequestOut(req, true)
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
-		fmt.Println(string(dump))
-	}
-
-	client := &http.Client{}
-	return client.Do(req)
 }
 
 func usedFlag(b *bool) func(*kingpin.ParseContext) error {
