@@ -1,16 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"strings"
 
 	"github.com/boltdb/bolt"
-	"github.com/elgs/gojq"
 	homedir "github.com/mitchellh/go-homedir"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
@@ -23,8 +20,8 @@ var (
 	db     *bolt.DB
 	dbFile string
 
-	request Request
-	filter  string
+	request  Request
+	response Response
 )
 
 func init() {
@@ -102,6 +99,7 @@ func main() {
 	}
 }
 
+// Do perform the request, display the response, and exit.
 func Do(command string) {
 	request.Method = command
 	resp, err := makeRequest()
@@ -110,25 +108,15 @@ func Do(command string) {
 		os.Exit(1)
 	}
 
-	verbose(1, resp.Status)
-
-	if err := showRequest(resp); err != nil {
+	response.verbose = verbLevel
+	if err := response.Load(resp, settings); err != nil {
 		fmt.Println("error displaying result:", err)
 		os.Exit(1)
 	}
 
-	// exit non zero if not a 200 response
-	if resp.StatusCode < 200 || resp.StatusCode > 300 {
-		// if the exit value gets too high it gets mangled
-		// so only keep the hundreds
-		os.Exit(resp.StatusCode / 100)
-	}
-}
+	fmt.Println(response)
 
-func verbose(level int, message string) {
-	if verbLevel >= level {
-		fmt.Println(message)
-	}
+	os.Exit(response.ExitCode())
 }
 
 func useService() error {
@@ -204,60 +192,6 @@ func usedFlag(b *bool) func(*kingpin.ParseContext) error {
 	}
 }
 
-func showRequest(r *http.Response) error {
-	// verbose, verbose logging
-	switch verbLevel {
-	case 0:
-	case 1:
-	case 2:
-		dump, err := httputil.DumpResponse(r, false)
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
-		fmt.Println(string(dump))
-	case 3:
-		dump, err := httputil.DumpResponse(r, true)
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
-		fmt.Println(string(dump))
-	}
-
-	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-
-	switch {
-	// filtered result
-	case filter != "":
-		result, err := filterResult(body)
-		if err != nil {
-			return err
-		}
-		if err := printJSON(result); err != nil {
-			return err
-		}
-	// pretty result
-	case settings.Pretty.Bool:
-		var msg json.RawMessage
-		if err := json.Unmarshal(body, &msg); err != nil {
-			return err
-		}
-		if err := printJSON(msg); err != nil {
-			return err
-		}
-	// unaltered result
-	default:
-		fmt.Println(string(body))
-	}
-
-	return nil
-}
-
 func paramReplacer(parameters map[string]string) *strings.Replacer {
 	rep := make([]string, 0, len(parameters))
 	for key, value := range parameters {
@@ -265,41 +199,4 @@ func paramReplacer(parameters map[string]string) *strings.Replacer {
 		rep = append(rep, value)
 	}
 	return strings.NewReplacer(rep...)
-}
-
-func filterResult(body []byte) (interface{}, error) {
-	parser, err := gojq.NewStringQuery(string(body))
-	if err != nil {
-		return nil, err
-	}
-
-	return parser.Query(filter)
-}
-
-// printJSON pretty prints json when it's set
-func printJSON(v interface{}) error {
-	var out []byte
-	var err error
-	if settings.Pretty.Bool {
-		out, err = json.MarshalIndent(v, "", settings.PrettyIndent.String)
-	} else {
-		out, err = json.Marshal(v)
-	}
-	if err != nil {
-		return err
-	}
-	result := string(out)
-
-	// the pretty flag removes quotes from results, this was added for
-	// filtered results to make them easier to work with, so you can
-	// directly put them into a parameter or header without doing your
-	// own trimming. This should be changed if a better UI for this
-	// behaviour is figured out.
-	if settings.Pretty.Bool {
-		result = strings.TrimPrefix(result, "\"")
-		result = strings.TrimSuffix(result, "\"")
-	}
-
-	fmt.Println(result)
-	return nil
 }
