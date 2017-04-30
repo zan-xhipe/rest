@@ -106,22 +106,21 @@ func (r *Response) filter() error {
 		if err != nil {
 			return err
 		}
+
+		// the pretty flag removes quotes from results, this was added for
+		// filtered results to make them easier to work with, so you can
+		// directly put them into a parameter or header without doing your
+		// own trimming. This should be changed if a better UI for this
+		// behaviour is figured out.
+		r.display = bytes.TrimPrefix(r.display, []byte{'"'})
+		r.display = bytes.TrimSuffix(r.display, []byte{'"'})
+
 		return nil
 	}
 
 	r.display, err = json.Marshal(out)
 	if err != nil {
 		return err
-	}
-
-	// the pretty flag removes quotes from results, this was added for
-	// filtered results to make them easier to work with, so you can
-	// directly put them into a parameter or header without doing your
-	// own trimming. This should be changed if a better UI for this
-	// behaviour is figured out.
-	if r.Pretty {
-		r.display = bytes.TrimPrefix(r.display, []byte{'"'})
-		r.display = bytes.TrimSuffix(r.display, []byte{'"'})
 	}
 
 	return nil
