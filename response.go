@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	"github.com/elgs/gojq"
+	"github.com/zan-xhipe/rest/jsondata"
 )
 
 type Response struct {
@@ -91,12 +91,12 @@ func (r *Response) Prepare() error {
 }
 
 func (r *Response) filter() error {
-	parser, err := gojq.NewStringQuery(string(r.Raw))
+	data, err := jsondata.New(string(r.Raw))
 	if err != nil {
 		return err
 	}
 
-	out, err := parser.Query(r.Filter)
+	out, err := data.Filter(r.Filter)
 	if err != nil {
 		return err
 	}
