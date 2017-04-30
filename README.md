@@ -53,7 +53,8 @@ Parameters also work in headers and URL query items
 Providing the right headers is crucial to many requests.  This is also one of the main motivations for creating ```rest``` instead of using ```curl```.
 
 # Filtering
-You can filtered any returned json with a basic filter language, supported by gojq.
+You can filtered any returned json with a basic filter language.  To access as specific field in an object just provide that fields name.  To access a specific item in a list use square brackets, as in ```[1]``` .  To access all element in use empty square brackets ```[]``` .  So ```[0].id``` will get you the id of the first element returned, while ```[].id``` will get you a list of all the ids.
+
 You can also pretty print output with the ```--pretty``` flag.  If you filter the output to a string you can remove the quotes around the string by also providing the pretty flag.
 
 # Storing Settings
