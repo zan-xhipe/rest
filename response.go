@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	"github.com/zan-xhipe/rest/jsondata"
+	jmespath "github.com/jmespath/go-jmespath"
 )
 
 type Response struct {
@@ -91,12 +91,12 @@ func (r *Response) Prepare() error {
 }
 
 func (r *Response) filter() error {
-	data, err := jsondata.New(string(r.Raw))
-	if err != nil {
+	var data interface{}
+	if err := json.Unmarshal(r.Raw, &data); err != nil {
 		return err
 	}
 
-	out, err := data.Filter(r.Filter)
+	out, err := jmespath.Search(r.Filter, data)
 	if err != nil {
 		return err
 	}
