@@ -27,7 +27,7 @@ func init() {
 		Required().
 		StringVar(&request.Path)
 
-	action.Arg("description", "a short description of the alias, will be used in generated help documentation").
+	action.Flag("description", "a short description of the alias, will be used in generated help documentation").
 		StringVar(&aliasDescription)
 
 	settings.Flags(action)
