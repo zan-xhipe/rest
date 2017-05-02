@@ -115,8 +115,16 @@ rest get user
 
 Retrieve all your repos
 ```
-rest service alias repos get users/:user/repos
-rest perform repos --pretty
+rest get users/:user/repos
+```
+
+Create a alias to return a list of the usernames of everyone who has starred your repo.
+```
+rest service alias stargazers get repos/:user/:repo/stargazers \
+	--filter [*].login \
+	--description 'List all users who have starred :repo'
+
+rest stargazers --parameter repo=<repo-name>
 ```
 
 # Todo
