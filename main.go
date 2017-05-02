@@ -84,12 +84,8 @@ func main() {
 	case "get", "post", "put", "delete":
 		Do(command)
 
-	case "perform":
-		Perform()
 	default:
-		fmt.Println("alias", command)
-		alias = command
-		Perform()
+		Perform(command)
 	}
 }
 

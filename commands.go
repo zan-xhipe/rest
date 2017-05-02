@@ -19,8 +19,6 @@ var (
 	post   = kingpin.Command("post", "Perform a POST request")
 	put    = kingpin.Command("put", "Perform a PUT request")
 	delete = kingpin.Command("delete", "Perform a DELETE request")
-
-	perform = kingpin.Command("perform", "Perform a predifined action")
 )
 
 func init() {
@@ -28,10 +26,6 @@ func init() {
 	requestDataMethod(post)
 	requestDataMethod(put)
 	requestMethod(delete)
-
-	perform.Arg("data", "data to send in the request").
-		StringVar(&request.Data)
-	requestFlags(perform)
 }
 
 // requestFlags apply to all the basic request types

@@ -2,11 +2,17 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/boltdb/bolt"
 	homedir "github.com/mitchellh/go-homedir"
+)
+
+var (
+	alias            string
+	aliasDescription string
 )
 
 func init() {
@@ -22,11 +28,17 @@ func init() {
 		Required().
 		StringVar(&request.Path)
 
+	action.Arg("description", "a short description of the alias, will be used in generated help documentation").
+		StringVar(&aliasDescription)
+
 	dir, err := homedir.Dir()
 	if err != nil {
 		panic(err)
 	}
 	dbFile = fmt.Sprintf("%s/%s", dir, ".rest.db")
+
+	// parse aliases and make them part of the command, aliases will show up on help,
+	// aliases can be called directly as a subcommand of 'rest'
 	if err := setAliases(); err != nil {
 		panic(err)
 	}
@@ -69,16 +81,84 @@ func setAliases() error {
 			return nil
 		}
 
-		return aliases.ForEach(setAlias)
+		return aliases.ForEach(func(k, _ []byte) error {
+			b := aliases.Bucket(k)
+			a := kingpin.Command(string(k), string(b.Get([]byte("description"))))
+			a.Arg("data", "data to send in the request").
+				StringVar(&request.Data)
+			requestFlags(a)
+
+			return nil
+		})
 	})
 }
 
-func setAlias(key, value []byte) error {
-	a := kingpin.Command(string(key), "")
+func addAlias() error {
+	return db.Update(func(tx *bolt.Tx) error {
+		sb, err := request.ServiceBucket(tx)
+		if err != nil {
+			return err
+		}
 
-	a.Arg("data", "data to send in the request").
-		StringVar(&request.Data)
-	requestFlags(a)
+		ab, err := sb.CreateBucketIfNotExists([]byte("aliases"))
+		if err != nil {
+			return err
+		}
 
-	return nil
+		a, err := ab.CreateBucketIfNotExists([]byte(alias))
+		if err != nil {
+			return err
+		}
+
+		if err := a.Put([]byte("method"), []byte(request.Method)); err != nil {
+			return err
+		}
+
+		if err := a.Put([]byte("path"), []byte(request.Path)); err != nil {
+			return err
+		}
+
+		if aliasDescription != "" {
+			if err := a.Put([]byte("description"), []byte(aliasDescription)); err != nil {
+				return err
+			}
+
+		}
+
+		return nil
+	})
+}
+
+func Perform(name string) {
+	err := db.View(func(tx *bolt.Tx) error {
+		sb, err := request.ServiceBucket(tx)
+		if err != nil {
+			return err
+		}
+
+		b := sb.Bucket([]byte("aliases"))
+		if b == nil {
+			return ErrNoAliases
+		}
+
+		a := b.Bucket([]byte(name))
+		if a == nil {
+			return ErrNoAlias{Alias: name}
+		}
+
+		method := string(a.Get([]byte("method")))
+		path := string(a.Get([]byte("path")))
+
+		request.Method = method
+		request.Path = path
+
+		return nil
+	})
+
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	Do(request.Method)
 }
