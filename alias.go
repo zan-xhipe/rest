@@ -84,8 +84,14 @@ func setAliases() error {
 		return aliases.ForEach(func(k, _ []byte) error {
 			b := aliases.Bucket(k)
 			a := kingpin.Command(string(k), string(b.Get([]byte("description"))))
-			a.Arg("data", "data to send in the request").
-				StringVar(&request.Data)
+
+			// attached data arguments to post and put methods
+			method := string(b.Get([]byte("method")))
+			if method == "post" || method == "put" {
+				a.Arg("data", "data to send in the request").
+					StringVar(&request.Data)
+			}
+
 			requestFlags(a)
 
 			return nil
