@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -12,6 +13,7 @@ import (
 
 var (
 	aliasDescription string
+	aliasParams      map[string]map[string]*string
 )
 
 func init() {
@@ -37,6 +39,8 @@ func init() {
 		panic(err)
 	}
 	dbFile = fmt.Sprintf("%s/%s", dir, ".rest.db")
+
+	aliasParams = make(map[string]map[string]*string)
 
 	// parse aliases and make them part of the command, aliases will show up on help,
 	// aliases can be called directly as a subcommand of 'rest'
@@ -94,6 +98,17 @@ func setAliases() error {
 			}
 
 			requestFlags(a)
+
+			path := strings.Split(string(b.Get([]byte("path"))), "/")
+			aliasParams[string(k)] = make(map[string]*string)
+			for _, p := range path {
+				if p[0] == ':' {
+					param := p[1:]
+
+					desc := fmt.Sprintf("set :%s parameter", param)
+					aliasParams[string(k)][param] = a.Flag(param, desc).String()
+				}
+			}
 
 			return nil
 		})
@@ -163,6 +178,13 @@ func Perform(name string) {
 
 		request.Method = method
 		request.Path = path
+
+		// get parameters from alias specific flags
+		for param := range aliasParams[name] {
+			if *aliasParams[name][param] != "" {
+				settings.Parameters[param] = *aliasParams[name][param]
+			}
+		}
 
 		return nil
 	})

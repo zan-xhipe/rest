@@ -27,6 +27,8 @@ You can switch between which service to use with ```rest service use <service-na
 # Aliases
 You can set an alias for a specific call with ```rest service alias <name> <method> <path> [<description>]``` .  Aliases become top level subcommands directly under ```rest```.  Using help will display the aliases with their descriptions.  When calling an alias it will use and path and method specific settings that you may have previously set.  You can also store settings that only apply to that alias, in which case path and method settings will be ignored.
 
+Any parameters in the aliased path will become flags in the aliased command that can be used to set that parameter when using the alias.
+
 This can be very useful to save actions that you perform often.  Combining this with parameters and storing filters is especially useful in turning rest into a client for the service.
 
 # Parameters
