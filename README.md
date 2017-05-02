@@ -126,7 +126,7 @@ rest service alias stargazers get repos/:user/:repo/stargazers \
 	--filter [*].login \
 	--description 'List all users who have starred :repo'
 
-rest stargazers --parameter repo=<repo-name>
+rest stargazers --repo <repo-name>
 ```
 
 # Todo
