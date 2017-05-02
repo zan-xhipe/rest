@@ -13,17 +13,17 @@ var (
 )
 
 func init() {
-	action.Arg("name", "name for the alias action").
-		Required().
-		StringVar(&alias)
+	// action.Arg("name", "name for the alias action").
+	// 	Required().
+	// 	StringVar(&alias)
 
-	action.Arg("method", "the method to use for the action").
-		Required().
-		StringVar(&request.Method)
+	// action.Arg("method", "the method to use for the action").
+	// 	Required().
+	// 	StringVar(&request.Method)
 
-	action.Arg("path", "the path to perform the action on").
-		Required().
-		StringVar(&request.Path)
+	// action.Arg("path", "the path to perform the action on").
+	// 	Required().
+	// 	StringVar(&request.Path)
 
 	perform.Arg("name", "action to perform").
 		Required().

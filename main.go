@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/boltdb/bolt"
-	homedir "github.com/mitchellh/go-homedir"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -24,13 +23,6 @@ var (
 
 func init() {
 	kingpin.Flag("verbose", "Verbose mode").Short('v').CounterVar(&verbLevel)
-	dir, err := homedir.Dir()
-	if err != nil {
-		panic(err)
-	}
-	dbFile = fmt.Sprintf("%s/%s", dir, ".rest.db")
-
-	kingpin.Flag("db", "which config database to use").Default(dbFile).StringVar(&dbFile)
 }
 
 func main() {
@@ -93,6 +85,10 @@ func main() {
 		Do(command)
 
 	case "perform":
+		Perform()
+	default:
+		fmt.Println("alias", command)
+		alias = command
 		Perform()
 	}
 }
