@@ -25,6 +25,7 @@ var (
 		Password:     sql.NullString{String: "", Valid: true},
 		Pretty:       sql.NullBool{Bool: false, Valid: true},
 		PrettyIndent: sql.NullString{String: "\t", Valid: true},
+		Filter:       sql.NullString{String: "", Valid: true},
 	}
 )
 
@@ -45,6 +46,7 @@ type Settings struct {
 	// output
 	Pretty       sql.NullBool
 	PrettyIndent sql.NullString
+	Filter       sql.NullString
 }
 
 // NewSettings returns a initialised settings struct
@@ -69,6 +71,7 @@ func (s *Settings) Merge(other Settings) {
 	mergeString(&s.Password, other.Password)
 	mergeBool(&s.Pretty, other.Pretty)
 	mergeString(&s.PrettyIndent, other.PrettyIndent)
+	mergeString(&s.Filter, other.Filter)
 }
 
 func mergeString(a *sql.NullString, b sql.NullString) {
@@ -138,6 +141,10 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause) {
 		Default(defaultSettings.PrettyIndent.String).
 		Action(usedFlag(&s.PrettyIndent.Valid)).
 		StringVar(&s.PrettyIndent.String)
+
+	cmd.Flag("filter", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]', for more filter options look at http://jmespath.org/ as filter uses JMESPath").
+		Action(usedFlag(&s.Filter.Valid)).
+		StringVar(&s.Filter.String)
 }
 
 // Write settings to the database
@@ -189,6 +196,10 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
+	if err := writeString(b, "filter", s.Filter); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -205,77 +216,7 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	s.Password = readString(b, "password")
 	s.Pretty = readBool(b, "pretty")
 	s.PrettyIndent = readString(b, "pretty-indent")
-}
-
-// Unset the database
-func (s Settings) Unset(b *bolt.Bucket) error {
-	if s.Scheme.Valid {
-		if err := b.Delete([]byte("scheme")); err != nil {
-			return err
-		}
-	}
-
-	if s.Host.Valid {
-		if err := b.Delete([]byte("host")); err != nil {
-			return err
-		}
-	}
-
-	if s.Port.Valid {
-		if err := b.Delete([]byte("port")); err != nil {
-			return err
-		}
-	}
-
-	if s.BasePath.Valid {
-		if err := b.Delete([]byte("base-path")); err != nil {
-			return err
-		}
-	}
-
-	if len(s.Headers) != 0 {
-		if err := unsetMapEntry(b, "headers", s.Headers); err != nil {
-			return err
-		}
-	}
-
-	if len(s.Parameters) != 0 {
-		if err := unsetMapEntry(b, "parameters", s.Parameters); err != nil {
-			return err
-		}
-	}
-
-	if len(s.Queries) != 0 {
-		if err := unsetMapEntry(b, "queries", s.Queries); err != nil {
-			return err
-		}
-	}
-
-	if s.Username.Valid {
-		if err := b.Delete([]byte("username")); err != nil {
-			return err
-		}
-	}
-
-	if s.Password.Valid {
-		if err := b.Delete([]byte("password")); err != nil {
-			return err
-		}
-	}
-
-	if s.Pretty.Valid {
-		if err := b.Delete([]byte("pretty")); err != nil {
-			return err
-		}
-	}
-
-	if s.PrettyIndent.Valid {
-		if err := b.Delete([]byte("pretty-indent")); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	s.Filter = readString(b, "filter")
 }
 
 // URL for the service

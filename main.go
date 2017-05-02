@@ -101,7 +101,7 @@ func Do(command string) {
 	}
 
 	response.verbose = verbLevel
-	if err := response.Load(resp, settings); err != nil {
+	if err := response.Load(resp, request.Settings); err != nil {
 		fmt.Println("error displaying result:", err)
 		os.Exit(1)
 	}

@@ -36,9 +36,6 @@ func requestFlags(cmd *kingpin.CmdClause) {
 
 	settings = NewSettings()
 	settings.Flags(cmd)
-
-	cmd.Flag("filter", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]'").StringVar(&response.Filter)
-
 }
 
 // requestMethod applies to all requests that don't accept a body

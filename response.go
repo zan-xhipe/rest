@@ -29,6 +29,7 @@ func (r *Response) Load(resp *http.Response, s Settings) error {
 
 	r.Pretty = s.Pretty.Bool
 	r.PrettyIndent = s.PrettyIndent.String
+	r.Filter = s.Filter.String
 
 	switch r.verbose {
 	case 1:
