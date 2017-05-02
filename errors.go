@@ -10,7 +10,7 @@ type ErrMalformedDB struct {
 }
 
 func (e ErrMalformedDB) Error() string {
-	return fmt.Sprintf("malformed database no %s bucket", e.Bucket)
+	return fmt.Sprintf("malformed database no %s bucket, initialise a service try 'rest help service init' for init help", e.Bucket)
 }
 
 type ErrNoService struct {
