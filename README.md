@@ -25,9 +25,9 @@ To list all your services use ```rest service list```
 You can switch between which service to use with ```rest service use <service-name>```
 
 # Aliases
-You can set an alias for a specific call with ```rest service alias <name> <method> <path> [<description>]``` .  Aliases become top level subcommands directly under ```rest```.  Using help will display the aliases with their descriptions.  When calling an alias it will use and path and method specific settings that you may have previously set.
+You can set an alias for a specific call with ```rest service alias <name> <method> <path> [<description>]``` .  Aliases become top level subcommands directly under ```rest```.  Using help will display the aliases with their descriptions.  When calling an alias it will use and path and method specific settings that you may have previously set.  You can also store settings that only apply to that alias, in which case path and method settings will be ignored.
 
-This can be very useful to save actions that you perform often.  Combining this with parameters is especially useful in turning rest into a client for the service.
+This can be very useful to save actions that you perform often.  Combining this with parameters and storing filters is especially useful in turning rest into a client for the service.
 
 # Parameters
 You can provide parameters with your request.  Parameters can either be stored in the service database using init, or provided with the request.  In a request the parameter name is preceded with ":", when storing the ":" is omitted.
