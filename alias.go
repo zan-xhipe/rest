@@ -11,14 +11,13 @@ import (
 )
 
 var (
-	alias            string
 	aliasDescription string
 )
 
 func init() {
 	action.Arg("name", "name for the alias action").
 		Required().
-		StringVar(&alias)
+		StringVar(&request.Alias)
 
 	action.Arg("method", "the method to use for the action").
 		Required().
@@ -30,6 +29,8 @@ func init() {
 
 	action.Arg("description", "a short description of the alias, will be used in generated help documentation").
 		StringVar(&aliasDescription)
+
+	settings.Flags(action)
 
 	dir, err := homedir.Dir()
 	if err != nil {
@@ -111,7 +112,7 @@ func addAlias() error {
 			return err
 		}
 
-		a, err := ab.CreateBucketIfNotExists([]byte(alias))
+		a, err := ab.CreateBucketIfNotExists([]byte(request.Alias))
 		if err != nil {
 			return err
 		}
@@ -131,11 +132,16 @@ func addAlias() error {
 
 		}
 
+		if err := settings.Write(a); err != nil {
+			return err
+		}
+
 		return nil
 	})
 }
 
 func Perform(name string) {
+	request.Alias = name
 	err := db.View(func(tx *bolt.Tx) error {
 		sb, err := request.ServiceBucket(tx)
 		if err != nil {

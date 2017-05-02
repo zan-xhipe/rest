@@ -21,6 +21,8 @@ type Request struct {
 	NoQueries bool
 	NoHeaders bool
 
+	Alias string
+
 	URL url.URL
 
 	verbose int
@@ -235,13 +237,28 @@ func (r *Request) LoadSettings(tx *bolt.Tx) error {
 	return nil
 }
 
-// Match returns the relavant db buckets for all requst settings
+// Match returns the relavant db buckets for all request settings, it will first check
+// for a matching alias, then check generic paths, if there is a matching alias, it
+// will be returned in the path bucket.
 func (r Request) Match(tx *bolt.Tx) (service, path, method *bolt.Bucket, err error) {
 	service, err = r.ServiceBucket(tx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
+	// match aliases first, if an alias matches then ignore path or method matches
+	ab := service.Bucket([]byte("aliases"))
+	if ab != nil {
+		c := ab.Cursor()
+		for key, _ := c.First(); key != nil; key, _ = c.Next() {
+			if string(key) == r.Alias {
+				path = ab.Bucket(key)
+				return service, path, nil, nil
+			}
+		}
+	}
+
+	// match path
 	pb := service.Bucket([]byte("paths"))
 	if pb == nil {
 		return service, nil, nil, nil
