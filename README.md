@@ -25,7 +25,7 @@ To list all your services use ```rest service list```
 You can switch between which service to use with ```rest service use <service-name>```
 
 # Aliases
-You can set an alias for a specific call with ```rest service alias <name> <method> <path>``` you can then use ```rest perform <name> [<data>]``` to call the aliased path with the specified method.  This will use any path and method specific settings that you may have previously set.
+You can set an alias for a specific call with ```rest service alias <name> <method> <path> [<description>]``` .  Aliases become top level subcommands directly under ```rest```.  Using help will display the aliases with their descriptions.  When calling an alias it will use and path and method specific settings that you may have previously set.
 
 This can be very useful to save actions that you perform often.  Combining this with parameters is especially useful in turning rest into a client for the service.
 
