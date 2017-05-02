@@ -121,7 +121,6 @@ rest perform repos --pretty
 
 # Todo
 - Allow setting parameters from the filtered output of a request
-- Make aliases first class commands instead of hiding them behind perform
 - Figure out how to interact sensibly with hypermedia
 
 # Motivation
