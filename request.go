@@ -125,6 +125,9 @@ func (r *Request) MakeServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 func (r *Request) ServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	if r.Service == "" {
 		info := tx.Bucket([]byte("info"))
+		if info == nil {
+			return nil, ErrNoInfoBucket
+		}
 		current := info.Get([]byte("current"))
 		r.Service = string(current)
 	}
