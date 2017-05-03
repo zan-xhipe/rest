@@ -34,7 +34,7 @@ type ErrNoAlias struct {
 }
 
 func (e ErrNoAlias) Error() string {
-	return fmt.Sprintf("no alias %s defined", e.Alias)
+	return fmt.Sprintf("no alias %s defined, provide method and path", e.Alias)
 }
 
 var (

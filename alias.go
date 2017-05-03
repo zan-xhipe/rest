@@ -22,11 +22,9 @@ func init() {
 		StringVar(&request.Alias)
 
 	action.Arg("method", "the method to use for the action").
-		Required().
 		StringVar(&request.Method)
 
 	action.Arg("path", "the path to perform the action on").
-		Required().
 		StringVar(&request.Path)
 
 	action.Flag("description", "a short description of the alias, will be used in generated help documentation").
@@ -99,20 +97,53 @@ func setAliases() error {
 
 			requestFlags(a)
 
-			path := strings.Split(string(b.Get([]byte("path"))), "/")
 			aliasParams[string(k)] = make(map[string]*string)
+
+			// turn path parameters into flags
+			path := strings.Split(string(b.Get([]byte("path"))), "/")
 			for _, p := range path {
 				if p[0] == ':' {
-					param := p[1:]
+					// param := p[1:]
 
-					desc := fmt.Sprintf("set :%s parameter", param)
-					aliasParams[string(k)][param] = a.Flag(param, desc).String()
+					addAliasParam(a, string(k), p[1:])
+					// desc := fmt.Sprintf("set :%s parameter", param)
+					// aliasParams[string(k)][param] = a.Flag(param, desc).String()
 				}
+			}
+
+			// turn header parameters into flags
+			if h := b.Bucket([]byte("headers")); h != nil {
+				h.ForEach(func(_, value []byte) error {
+					v := strings.Fields(string(value))
+					for i := range v {
+						if v[i][0] == ':' {
+							addAliasParam(a, string(k), v[i][1:])
+						}
+					}
+
+					return nil
+				})
+			}
+
+			// turn query parameters into flags
+			if q := b.Bucket([]byte("queries")); q != nil {
+				q.ForEach(func(_, value []byte) error {
+					if value[0] == ':' {
+						addAliasParam(a, string(k), string(value[1:]))
+					}
+
+					return nil
+				})
 			}
 
 			return nil
 		})
 	})
+}
+
+func addAliasParam(cmd *kingpin.CmdClause, name, param string) {
+	desc := fmt.Sprintf("set :%s parameter", param)
+	aliasParams[name][param] = cmd.Flag(param, desc).String()
 }
 
 func addAlias() error {
@@ -132,19 +163,29 @@ func addAlias() error {
 			return err
 		}
 
-		if err := a.Put([]byte("method"), []byte(request.Method)); err != nil {
-			return err
+		// complian if the method has not already been set
+		switch {
+		case a.Get([]byte("method")) == nil && request.Method == "":
+			return ErrNoAlias{Alias: request.Alias}
+		case request.Method != "":
+			if err := a.Put([]byte("method"), []byte(request.Method)); err != nil {
+				return err
+			}
 		}
 
-		if err := a.Put([]byte("path"), []byte(request.Path)); err != nil {
-			return err
+		switch {
+		case a.Get([]byte("path")) == nil && request.Path == "":
+			return ErrNoAlias{Alias: request.Alias}
+		case request.Method != "":
+			if err := a.Put([]byte("path"), []byte(request.Path)); err != nil {
+				return err
+			}
 		}
 
 		if aliasDescription != "" {
 			if err := a.Put([]byte("description"), []byte(aliasDescription)); err != nil {
 				return err
 			}
-
 		}
 
 		if err := settings.Write(a); err != nil {
