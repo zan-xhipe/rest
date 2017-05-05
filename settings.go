@@ -14,18 +14,19 @@ import (
 
 var (
 	defaultSettings = Settings{
-		Scheme:       sql.NullString{String: "https", Valid: true},
-		Host:         sql.NullString{String: "localhost", Valid: true},
-		Port:         sql.NullInt64{Int64: 443, Valid: true},
-		BasePath:     sql.NullString{String: "", Valid: true},
-		Headers:      make(map[string]string),
-		Parameters:   make(map[string]string),
-		Queries:      make(map[string]string),
-		Username:     sql.NullString{String: "", Valid: true},
-		Password:     sql.NullString{String: "", Valid: true},
-		Pretty:       sql.NullBool{Bool: false, Valid: true},
-		PrettyIndent: sql.NullString{String: "\t", Valid: true},
-		Filter:       sql.NullString{String: "", Valid: true},
+		Scheme:        sql.NullString{String: "https", Valid: true},
+		Host:          sql.NullString{String: "localhost", Valid: true},
+		Port:          sql.NullInt64{Int64: 443, Valid: true},
+		BasePath:      sql.NullString{String: "", Valid: true},
+		Headers:       make(map[string]string),
+		Parameters:    make(map[string]string),
+		Queries:       make(map[string]string),
+		Username:      sql.NullString{String: "", Valid: true},
+		Password:      sql.NullString{String: "", Valid: true},
+		Pretty:        sql.NullBool{Bool: false, Valid: true},
+		PrettyIndent:  sql.NullString{String: "\t", Valid: true},
+		Filter:        sql.NullString{String: "", Valid: true},
+		SetParameters: make(map[string]string),
 	}
 )
 
@@ -44,17 +45,19 @@ type Settings struct {
 	Password sql.NullString
 
 	// output
-	Pretty       sql.NullBool
-	PrettyIndent sql.NullString
-	Filter       sql.NullString
+	Pretty        sql.NullBool
+	PrettyIndent  sql.NullString
+	Filter        sql.NullString
+	SetParameters map[string]string
 }
 
 // NewSettings returns a initialised settings struct
 func NewSettings() Settings {
 	return Settings{
-		Headers:    make(map[string]string),
-		Parameters: make(map[string]string),
-		Queries:    make(map[string]string),
+		Headers:       make(map[string]string),
+		Parameters:    make(map[string]string),
+		Queries:       make(map[string]string),
+		SetParameters: make(map[string]string),
 	}
 }
 
@@ -72,6 +75,7 @@ func (s *Settings) Merge(other Settings) {
 	mergeBool(&s.Pretty, other.Pretty)
 	mergeString(&s.PrettyIndent, other.PrettyIndent)
 	mergeString(&s.Filter, other.Filter)
+	mergeMap(s.SetParameters, other.SetParameters)
 }
 
 func mergeString(a *sql.NullString, b sql.NullString) {
@@ -145,6 +149,9 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause) {
 	cmd.Flag("filter", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]', for more filter options look at http://jmespath.org/ as filter uses JMESPath").
 		Action(usedFlag(&s.Filter.Valid)).
 		StringVar(&s.Filter.String)
+
+	cmd.Flag("set-parameter", "takes the form 'parameter.path=filter-expression' The parameter.path is a period separated path to the bucket where the parameter must be set.  filter-expression is a JMESPath expression that will be used to determine what the parameter is set to.  If the filter returns nothing, then the parameter is unset").
+		StringMapVar(&s.SetParameters)
 }
 
 // Write settings to the database
@@ -200,6 +207,10 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
+	if err := writeMap(b, "set-parameters", s.SetParameters); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -217,6 +228,7 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	s.Pretty = readBool(b, "pretty")
 	s.PrettyIndent = readString(b, "pretty-indent")
 	s.Filter = readString(b, "filter")
+	bucketMap(b.Bucket([]byte("set-parameters")), &s.SetParameters)
 }
 
 // URL for the service

@@ -7,7 +7,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 
+	"github.com/boltdb/bolt"
 	jmespath "github.com/jmespath/go-jmespath"
 )
 
@@ -17,9 +19,10 @@ type Response struct {
 
 	resp *http.Response
 
-	Filter       string
-	Pretty       bool
-	PrettyIndent string
+	Filter        string
+	Pretty        bool
+	PrettyIndent  string
+	SetParameters map[string]string
 
 	verbose int
 }
@@ -30,6 +33,7 @@ func (r *Response) Load(resp *http.Response, s Settings) error {
 	r.Pretty = s.Pretty.Bool
 	r.PrettyIndent = s.PrettyIndent.String
 	r.Filter = s.Filter.String
+	r.SetParameters = s.SetParameters
 
 	switch r.verbose {
 	case 1:
@@ -88,24 +92,81 @@ func (r *Response) Prepare() error {
 		r.display = r.Raw
 	}
 
+	if err := r.setParameters(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (r *Response) filter() error {
-	var data interface{}
-	if err := json.Unmarshal(r.Raw, &data); err != nil {
-		return err
-	}
-
-	out, err := jmespath.Search(r.Filter, data)
+	var err error
+	r.display, err = filter(r.Raw, r.Filter, r.Pretty, r.PrettyIndent)
 	if err != nil {
 		return err
 	}
 
-	if r.Pretty {
-		r.display, err = json.MarshalIndent(out, "", r.PrettyIndent)
+	return nil
+}
+
+func (r *Response) setParameters() error {
+	return db.Update(func(tx *bolt.Tx) error {
+		current := string(tx.Bucket([]byte("info")).Get([]byte("current")))
+
+		for param, filt := range r.SetParameters {
+			result, err := filter(r.Raw, filt, r.Pretty, r.PrettyIndent)
+			if err != nil {
+				return err
+			}
+
+			// get the path for the bucket, this starts with the current service, but ends before the parameter
+			// name
+			p := strings.Split(param, ".")
+			path := strings.Join(append([]string{"services", string(current)}, p[:len(p)-1]...), ".")
+
+			b := getBucket(tx, path)
+			if b == nil {
+				return ErrInvalidPath{Path: path}
+			}
+
+			// the filter returned no result, unset the parameter
+			if result == nil {
+				unsetBucket(b, fmt.Sprintf("parameters.%s", p[len(p)-1]))
+				return nil
+			}
+
+			// this needs to be here as each set could be for a different path
+			s := NewSettings()
+			s.Parameters[p[len(p)-1]] = string(result)
+
+			if err := s.Write(b); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+func filter(data []byte, exp string, pretty bool, indent string) ([]byte, error) {
+	var d interface{}
+	if err := json.Unmarshal(data, &d); err != nil {
+		return nil, err
+	}
+
+	out, err := jmespath.Search(exp, d)
+	if err != nil {
+		return nil, err
+	}
+
+	if out == nil {
+		return nil, nil
+	}
+
+	if pretty {
+		display, err := json.MarshalIndent(out, "", indent)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// the pretty flag removes quotes from results, this was added for
@@ -113,18 +174,18 @@ func (r *Response) filter() error {
 		// directly put them into a parameter or header without doing your
 		// own trimming. This should be changed if a better UI for this
 		// behaviour is figured out.
-		r.display = bytes.TrimPrefix(r.display, []byte{'"'})
-		r.display = bytes.TrimSuffix(r.display, []byte{'"'})
+		display = bytes.TrimPrefix(display, []byte{'"'})
+		display = bytes.TrimSuffix(display, []byte{'"'})
 
-		return nil
+		return display, nil
 	}
 
-	r.display, err = json.Marshal(out)
+	display, err := json.Marshal(out)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return display, nil
 }
 
 func (r Response) ExitCode() int {

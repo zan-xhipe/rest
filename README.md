@@ -89,12 +89,17 @@ To remove a setting use ```rest service unset``` followed by the key to unset.  
 ### parameter
 	Parameters can be substituted in other fields.
 
+## Set Parameter
+You can use the ```--set-parameter``` flag to set a parameter from the output of the request.  It takes the path to the parameter bucket and a filter to apply to the response before it is stored.  The parameter path is a dotted string, if just the parameter is provided then it will be stored in the service top level settings, to store the parameter under a alias or a path/method you need to provide the path to that bucket.  For aliases this looks like ```aliases.<alias>``` for paths/methods ```paths.<path>[.<method>]```.  The filter is the same as the display filter.  If the filter returns no results then the parameter is unset.
+
+This allows basic pagination with services that return an offset iterator.  Note though that in this case you will loop through the results if you don't check that the offset hasn't been set.
+
 # Return Value
 Because rest is intended to be used alongside other command line programs the HTTP response code returned by the service is mapped to a return value.  Any 200 response is mapped to 0, any 300 is mapped 3, 400 to 4, and 500 to 5. Errors resulting from bad input from the cli or errors in the service database return 1.
 
 # Example
 ## Github
-Github requires that you provide the accept header for the version of the API. ```$GITHUB_AUTH_TOKEN``` is a developer token.  We store the github username in ```$GITHUB_USER``` so that it can be set as a parameter.
+Github requires that you provide the accept header for the version of the API. ```$GITHUB_AUTH_TOKEN``` is a developer token.  We store your Github usrename as the ```user``` parameter, it is called 'login' by Github.
 
 Note the quotes when setting the authorization token, if we don't provide this it will split the header on the space and you will end up creating a path setting named after your token with a Authorization header that only contains ```token```.
 
@@ -106,8 +111,7 @@ rest service init github \
 	--header Accept=application/vnd.github.v3+json
 rest service use github
 rest service set --header Authorization="token $GITHUB_AUTH_TOKEN"
-GITHUB_USER=$(rest get user --pretty --filter login)
-rest service set --parameter user="$GITHUB_USER"
+rest get user --pretty --set-parameter user=login
 ```
 
 Retrieve information about yourself
@@ -130,7 +134,6 @@ rest stargazers --repo <repo-name>
 ```
 
 # Todo
-- Allow setting parameters from the filtered output of a request
 - Figure out how to interact sensibly with hypermedia
 
 # Motivation
