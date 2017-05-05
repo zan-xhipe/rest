@@ -211,7 +211,7 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	s.BasePath = readString(b, "base-path")
 	bucketMap(b.Bucket([]byte("headers")), &s.Headers)
 	bucketMap(b.Bucket([]byte("parameters")), &s.Parameters)
-	bucketMap(b.Bucket([]byte("Queries")), &s.Queries)
+	bucketMap(b.Bucket([]byte("queries")), &s.Queries)
 	s.Username = readString(b, "username")
 	s.Password = readString(b, "password")
 	s.Pretty = readBool(b, "pretty")
