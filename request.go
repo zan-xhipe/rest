@@ -74,7 +74,10 @@ func (r *Request) Prepare() (*http.Request, error) {
 	if !r.NoQueries {
 		q := r.URL.Query()
 		for key, value := range r.Settings.Queries {
-			q.Set(params.Replace(key), params.Replace(value))
+			v := params.Replace(value)
+			if v[0] != ':' {
+				q.Set(key, v)
+			}
 		}
 		r.URL.RawQuery = q.Encode()
 	}
@@ -95,7 +98,10 @@ func (r *Request) Prepare() (*http.Request, error) {
 
 	if !r.NoHeaders {
 		for key, value := range r.Settings.Headers {
-			req.Header.Set(params.Replace(key), params.Replace(value))
+			v := params.Replace(value)
+			if v[0] != ':' {
+				req.Header.Set(key, v)
+			}
 		}
 	}
 
