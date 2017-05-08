@@ -2,11 +2,14 @@ package main
 
 import (
 	"fmt"
+	"math"
+	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/boltdb/bolt"
 )
@@ -57,8 +60,45 @@ func (r *Request) Perform() (*http.Response, error) {
 		fmt.Println(string(dump))
 	}
 
+	return r.retry(req)
+}
+
+func (r *Request) retry(req *http.Request) (*http.Response, error) {
 	client := &http.Client{}
-	return client.Do(req)
+
+	var resp *http.Response
+	var err error
+	maxAttempts := int(r.Settings.Retries.Int64) + 1
+
+	for i := 0; i < maxAttempts; i++ {
+
+		if r.verbose > 0 {
+			fmt.Printf("attempt %d: %s %s\n", i, req.Method, req.URL)
+		}
+
+		resp, err = client.Do(req)
+		if err == nil && resp.StatusCode < 500 {
+			return resp, nil
+		}
+
+		// TODO: respect the Retry-After header
+		delay := r.Settings.RetryDelay.Duration
+
+		if r.Settings.ExponentialBackoff.Bool {
+			delay *= time.Duration(math.Exp(float64(i)))
+		}
+
+		if r.Settings.RetryJitter.Bool {
+			delay = time.Duration(rand.Intn(int(delay)))
+		}
+
+		if r.verbose > 0 && delay > 0 && i < maxAttempts {
+			fmt.Printf("waiting %s to retry\n", delay)
+		}
+		<-time.After(delay)
+	}
+
+	return resp, err
 }
 
 // Prepare the http request.  This will substitute all the parameters,

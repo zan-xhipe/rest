@@ -6,11 +6,17 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"time"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/boltdb/bolt"
 )
+
+type NullDuration struct {
+	Duration time.Duration
+	Valid    bool
+}
 
 var (
 	defaultSettings = Settings{
@@ -27,6 +33,11 @@ var (
 		PrettyIndent:  sql.NullString{String: "\t", Valid: true},
 		Filter:        sql.NullString{String: "", Valid: true},
 		SetParameters: make(map[string]string),
+
+		Retries:            sql.NullInt64{Int64: 0, Valid: true},
+		RetryDelay:         NullDuration{Duration: 0, Valid: true},
+		ExponentialBackoff: sql.NullBool{Bool: true, Valid: true},
+		RetryJitter:        sql.NullBool{Bool: true, Valid: true},
 	}
 )
 
@@ -49,6 +60,11 @@ type Settings struct {
 	PrettyIndent  sql.NullString
 	Filter        sql.NullString
 	SetParameters map[string]string
+
+	Retries            sql.NullInt64
+	RetryDelay         NullDuration
+	ExponentialBackoff sql.NullBool
+	RetryJitter        sql.NullBool
 }
 
 // NewSettings returns a initialised settings struct
@@ -76,6 +92,10 @@ func (s *Settings) Merge(other Settings) {
 	mergeString(&s.PrettyIndent, other.PrettyIndent)
 	mergeString(&s.Filter, other.Filter)
 	mergeMap(s.SetParameters, other.SetParameters)
+	mergeInt(&s.Retries, other.Retries)
+	mergeDuration(&s.RetryDelay, other.RetryDelay)
+	mergeBool(&s.ExponentialBackoff, other.ExponentialBackoff)
+	mergeBool(&s.RetryJitter, other.RetryJitter)
 }
 
 func mergeString(a *sql.NullString, b sql.NullString) {
@@ -99,6 +119,12 @@ func mergeBool(a *sql.NullBool, b sql.NullBool) {
 func mergeMap(a, b map[string]string) {
 	for k, v := range b {
 		a[k] = v
+	}
+}
+
+func mergeDuration(a *NullDuration, b NullDuration) {
+	if b.Valid {
+		*a = b
 	}
 }
 
@@ -131,8 +157,12 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause, hide bool) {
 		flg(name, usage, "").StringMapVar(m)
 	}
 
-	boolFlag := func(name, usage string, v *sql.NullBool) {
-		flg(name, usage, "").Action(usedFlag(&v.Valid)).BoolVar(&v.Bool)
+	boolFlag := func(name, usage string, dflt bool, v *sql.NullBool) {
+		flg(name, usage, "").Default(fmt.Sprint(dflt)).Action(usedFlag(&v.Valid)).BoolVar(&v.Bool)
+	}
+
+	durationFlag := func(name, usage string, v *NullDuration) {
+		flg(name, usage, "").Action(usedFlag(&v.Valid)).DurationVar(&v.Duration)
 	}
 
 	stringFlag("scheme", "scheme used to access the service", df.Scheme.String, &s.Scheme)
@@ -147,13 +177,18 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause, hide bool) {
 	stringFlag("username", "set basic auth username", "", &s.Username)
 	stringFlag("password", "set basic auth password, NOTE: stored in plain text", "", &s.Password)
 
-	boolFlag("pretty", "pretty print json output, removes quotes when filtering", &s.Pretty)
+	boolFlag("pretty", "pretty print json output, removes quotes when filtering", df.Pretty.Bool, &s.Pretty)
 
 	stringFlag("pretty-indent", "string to use to indent pretty json", df.PrettyIndent.String, &s.PrettyIndent)
 
 	stringFlag("filter", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]', for more filter options look at http://jmespath.org/ as filter uses JMESPath", "", &s.Filter)
 
 	mapFlag("set-parameter", "takes the form 'parameter.path=filter-expression' The parameter.path is a period separated path to the bucket where the parameter must be set.  filter-expression is a JMESPath expression that will be used to determine what the parameter is set to.  If the filter returns nothing, then the parameter is unset", &s.SetParameters)
+
+	intFlag("retries", "how many times to retry the command if it fails", "", &s.Retries)
+	durationFlag("retry-delay", "how long to wait between retries, accepts a duration", &s.RetryDelay)
+	boolFlag("exponential-backoff", "wether retries should exponentially backoff, uses the retry delay", df.ExponentialBackoff.Bool, &s.ExponentialBackoff)
+	boolFlag("retry-jitter", "adds jitter to retry delay", df.RetryJitter.Bool, &s.RetryJitter)
 }
 
 // Write settings to the database
@@ -213,6 +248,22 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
+	if err := writeInt(b, "retries", s.Retries); err != nil {
+		return err
+	}
+
+	if err := writeDuration(b, "retry-delay", s.RetryDelay); err != nil {
+		return err
+	}
+
+	if err := writeBool(b, "exponential-backoff", s.ExponentialBackoff); err != nil {
+		return err
+	}
+
+	if err := writeBool(b, "retry-jitter", s.RetryJitter); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -231,6 +282,10 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	s.PrettyIndent = readString(b, "pretty-indent")
 	s.Filter = readString(b, "filter")
 	bucketMap(b.Bucket([]byte("set-parameters")), &s.SetParameters)
+	s.Retries = readInt(b, "retries")
+	s.RetryDelay = readDuration(b, "retry-delay")
+	s.ExponentialBackoff = readBool(b, "exponential-backoff")
+	s.RetryJitter = readBool(b, "retry-jitter")
 }
 
 // URL for the service
@@ -287,6 +342,14 @@ func writeMap(b *bolt.Bucket, key string, data map[string]string) error {
 	return nil
 }
 
+func writeDuration(b *bolt.Bucket, key string, value NullDuration) error {
+	if !value.Valid {
+		return nil
+	}
+
+	return b.Put([]byte(key), []byte(fmt.Sprint(value.Duration)))
+}
+
 func readString(b *bolt.Bucket, key string) sql.NullString {
 	v := b.Get([]byte(key))
 	if v == nil {
@@ -322,6 +385,20 @@ func readBool(b *bolt.Bucket, key string) sql.NullBool {
 	}
 
 	return sql.NullBool{Bool: p, Valid: true}
+}
+
+func readDuration(b *bolt.Bucket, key string) NullDuration {
+	v := b.Get([]byte(key))
+	if v == nil {
+		return NullDuration{}
+	}
+
+	d, err := time.ParseDuration(string(v))
+	if err != nil {
+		panic(err)
+	}
+
+	return NullDuration{Duration: d, Valid: true}
 }
 
 func unsetMapEntry(b *bolt.Bucket, key string, entries map[string]string) error {
