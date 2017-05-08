@@ -30,7 +30,7 @@ func init() {
 	action.Flag("description", "a short description of the alias, will be used in generated help documentation").
 		StringVar(&aliasDescription)
 
-	settings.Flags(action)
+	settings.Flags(action, false)
 
 	dir, err := homedir.Dir()
 	if err != nil {
@@ -86,7 +86,13 @@ func setAliases() error {
 
 		return aliases.ForEach(func(k, _ []byte) error {
 			b := aliases.Bucket(k)
-			a := kingpin.Command(string(k), string(b.Get([]byte("description"))))
+			desc := fmt.Sprintf(
+				"%s\n\n%s",
+				string(b.Get([]byte("description"))),
+				"All normal request flags are available, but hidden to keep help relevant",
+			)
+
+			a := kingpin.Command(string(k), desc)
 
 			// attached data arguments to post and put methods
 			method := string(b.Get([]byte("method")))
@@ -95,7 +101,7 @@ func setAliases() error {
 					StringVar(&request.Data)
 			}
 
-			requestFlags(a)
+			requestFlags(a, true)
 
 			aliasParams[string(k)] = make(map[string]*string)
 

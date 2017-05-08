@@ -18,10 +18,10 @@ func init() {
 	set.Arg("path", "only apply settings to this path").StringVar(&request.Path)
 	set.Arg("request", "only apply settings when performing specified request type on path").StringVar(&request.Method)
 
-	settings.Flags(set)
+	settings.Flags(set, false)
 
 	initSrv.Arg("service", "initialise service").Required().StringVar(&request.Service)
-	settings.Flags(initSrv)
+	settings.Flags(initSrv, false)
 
 	remSrv.Arg("service", "remove service").Required().StringVar(&request.Service)
 

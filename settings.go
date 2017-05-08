@@ -103,55 +103,57 @@ func mergeMap(a, b map[string]string) {
 }
 
 // Flags attach all the settings flags to a command
-func (s *Settings) Flags(cmd *kingpin.CmdClause) {
-	cmd.Flag("scheme", "scheme used to access the service").
-		Default(defaultSettings.Scheme.String).
-		Action(usedFlag(&s.Scheme.Valid)).
-		StringVar(&s.Scheme.String)
+func (s *Settings) Flags(cmd *kingpin.CmdClause, hide bool) {
+	df := defaultSettings
+	flg := func(name, usage, deflt string) *kingpin.FlagClause {
+		c := cmd.Flag(name, usage)
 
-	cmd.Flag("host", "hostname for the service").
-		Default(defaultSettings.Host.String).
-		Action(usedFlag(&s.Host.Valid)).
-		StringVar(&s.Host.String)
+		if deflt != "" {
+			c = c.Default(deflt)
+		}
 
-	cmd.Flag("port", "port to access the service").
-		Default(fmt.Sprint(defaultSettings.Port.Int64)).
-		Action(usedFlag(&s.Port.Valid)).
-		Int64Var(&s.Port.Int64)
+		if hide {
+			c = c.Hidden()
+		}
 
-	cmd.Flag("base-path", "base path to use with service").
-		Action(usedFlag(&s.BasePath.Valid)).
-		StringVar(&s.BasePath.String)
+		return c
+	}
 
-	cmd.Flag("header", "set header for request").
-		StringMapVar(&s.Headers)
-	cmd.Flag("parameter", "set parameter for request").
-		StringMapVar(&s.Parameters)
-	cmd.Flag("query", "set query parameters for request").
-		StringMapVar(&s.Queries)
+	stringFlag := func(name, usage, deflt string, v *sql.NullString) {
+		flg(name, usage, deflt).Action(usedFlag(&v.Valid)).StringVar(&v.String)
+	}
 
-	cmd.Flag("username", "set basic auth username").
-		Action(usedFlag(&s.Username.Valid)).
-		StringVar(&s.Username.String)
-	cmd.Flag("password", "set basic auth password, NOTE: stored in plain text").
-		Action(usedFlag(&s.Password.Valid)).
-		StringVar(&s.Password.String)
+	intFlag := func(name, usage, deflt string, v *sql.NullInt64) {
+		flg(name, usage, deflt).Action(usedFlag(&v.Valid)).Int64Var(&v.Int64)
+	}
 
-	cmd.Flag("pretty", "pretty print json output, removes quotes when filtering").
-		Action(usedFlag(&s.Pretty.Valid)).
-		BoolVar(&s.Pretty.Bool)
+	mapFlag := func(name, usage string, m *map[string]string) {
+		flg(name, usage, "").StringMapVar(m)
+	}
 
-	cmd.Flag("pretty-indent", "string to use to indent pretty json").
-		Default(defaultSettings.PrettyIndent.String).
-		Action(usedFlag(&s.PrettyIndent.Valid)).
-		StringVar(&s.PrettyIndent.String)
+	boolFlag := func(name, usage string, v *sql.NullBool) {
+		flg(name, usage, "").Action(usedFlag(&v.Valid)).BoolVar(&v.Bool)
+	}
 
-	cmd.Flag("filter", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]', for more filter options look at http://jmespath.org/ as filter uses JMESPath").
-		Action(usedFlag(&s.Filter.Valid)).
-		StringVar(&s.Filter.String)
+	stringFlag("scheme", "scheme used to access the service", df.Scheme.String, &s.Scheme)
+	stringFlag("host", "hostname for the service", df.Host.String, &s.Host)
+	intFlag("port", "port to access the service  on", strconv.Itoa(int(df.Port.Int64)), &s.Port)
+	stringFlag("base-path", "base path to use with service", "", &s.BasePath)
 
-	cmd.Flag("set-parameter", "takes the form 'parameter.path=filter-expression' The parameter.path is a period separated path to the bucket where the parameter must be set.  filter-expression is a JMESPath expression that will be used to determine what the parameter is set to.  If the filter returns nothing, then the parameter is unset").
-		StringMapVar(&s.SetParameters)
+	mapFlag("header", "set header for request", &s.Headers)
+	mapFlag("parameter", "set parameter for request", &s.Parameters)
+	mapFlag("query", "set query parameters for request", &s.Queries)
+
+	stringFlag("username", "set basic auth username", "", &s.Username)
+	stringFlag("password", "set basic auth password, NOTE: stored in plain text", "", &s.Password)
+
+	boolFlag("pretty", "pretty print json output, removes quotes when filtering", &s.Pretty)
+
+	stringFlag("pretty-indent", "string to use to indent pretty json", df.PrettyIndent.String, &s.PrettyIndent)
+
+	stringFlag("filter", "pull parts out of the returned json. use [#] to access specific elements from an array, use the key name to access the key. eg. '[0].id', 'id', and 'things.[1]', for more filter options look at http://jmespath.org/ as filter uses JMESPath", "", &s.Filter)
+
+	mapFlag("set-parameter", "takes the form 'parameter.path=filter-expression' The parameter.path is a period separated path to the bucket where the parameter must be set.  filter-expression is a JMESPath expression that will be used to determine what the parameter is set to.  If the filter returns nothing, then the parameter is unset", &s.SetParameters)
 }
 
 // Write settings to the database
