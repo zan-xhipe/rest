@@ -5,7 +5,7 @@ import kingpin "gopkg.in/alecthomas/kingpin.v2"
 var (
 	_ = kingpin.Command("version", "display version info").Hidden()
 
-	srv     = kingpin.Command("service", "manage service settings")
+	srv     = kingpin.Command("service", "commands to manage service settings")
 	initSrv = srv.Command("init", "initialise a service")
 	remSrv  = srv.Command("remove", "remove a service")
 	set     = srv.Command("set", "set a value")
