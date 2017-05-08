@@ -3,7 +3,7 @@ package main
 import kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 var (
-	_ = kingpin.Command("version", "display version info")
+	_ = kingpin.Command("version", "display version info").Hidden()
 
 	srv     = kingpin.Command("service", "manage service settings")
 	initSrv = srv.Command("init", "initialise a service")

@@ -22,6 +22,7 @@ var (
 )
 
 func init() {
+	kingpin.Version(versionNumber)
 	kingpin.Flag("verbose", "Verbose mode").Short('v').CounterVar(&verbLevel)
 }
 
