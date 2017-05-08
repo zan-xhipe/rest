@@ -48,13 +48,17 @@ func initService() error {
 		}
 
 		// if this is the first service to be set then set then also make it current service
-		if info := tx.Bucket([]byte("info")); info == nil {
-			ib, err := tx.CreateBucket([]byte("info"))
+		info := tx.Bucket([]byte("info"))
+		if info == nil {
+			info, err = tx.CreateBucket([]byte("info"))
 			if err != nil {
 				return err
 			}
 
-			if err := ib.Put([]byte("current"), []byte(request.Service)); err != nil {
+		}
+
+		if info.Get([]byte("current")) == nil {
+			if err := info.Put([]byte("current"), []byte(request.Service)); err != nil {
 				return err
 			}
 		}
@@ -81,7 +85,7 @@ func removeService() error {
 
 		current := string(info.Get([]byte("current")))
 		if current == request.Service {
-			if err := info.Put([]byte("current"), nil); err != nil {
+			if err := info.Delete([]byte("current")); err != nil {
 				return err
 			}
 		}
