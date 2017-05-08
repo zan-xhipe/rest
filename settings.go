@@ -35,7 +35,7 @@ var (
 		SetParameters: make(map[string]string),
 
 		Retries:            sql.NullInt64{Int64: 0, Valid: true},
-		RetryDelay:         NullDuration{Duration: 0, Valid: true},
+		RetryDelay:         NullDuration{Duration: 100000000, Valid: true},
 		ExponentialBackoff: sql.NullBool{Bool: true, Valid: true},
 		RetryJitter:        sql.NullBool{Bool: true, Valid: true},
 	}
@@ -161,8 +161,8 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause, hide bool) {
 		flg(name, usage, "").Default(fmt.Sprint(dflt)).Action(usedFlag(&v.Valid)).BoolVar(&v.Bool)
 	}
 
-	durationFlag := func(name, usage string, v *NullDuration) {
-		flg(name, usage, "").Action(usedFlag(&v.Valid)).DurationVar(&v.Duration)
+	durationFlag := func(name, usage string, dflt time.Duration, v *NullDuration) {
+		flg(name, usage, "").Default(fmt.Sprint(dflt)).Action(usedFlag(&v.Valid)).DurationVar(&v.Duration)
 	}
 
 	stringFlag("scheme", "scheme used to access the service", df.Scheme.String, &s.Scheme)
@@ -186,7 +186,7 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause, hide bool) {
 	mapFlag("set-parameter", "takes the form 'parameter.path=filter-expression' The parameter.path is a period separated path to the bucket where the parameter must be set.  filter-expression is a JMESPath expression that will be used to determine what the parameter is set to.  If the filter returns nothing, then the parameter is unset", &s.SetParameters)
 
 	intFlag("retries", "how many times to retry the command if it fails", "", &s.Retries)
-	durationFlag("retry-delay", "how long to wait between retries, accepts a duration", &s.RetryDelay)
+	durationFlag("retry-delay", "how long to wait between retries, accepts a duration", df.RetryDelay.Duration, &s.RetryDelay)
 	boolFlag("exponential-backoff", "wether retries should exponentially backoff, uses the retry delay", df.ExponentialBackoff.Bool, &s.ExponentialBackoff)
 	boolFlag("retry-jitter", "adds jitter to retry delay", df.RetryJitter.Bool, &s.RetryJitter)
 }
