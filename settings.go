@@ -36,7 +36,7 @@ var (
 		Filter:        sql.NullString{String: "", Valid: true},
 		SetParameters: make(map[string]string),
 
-		Retries:            sql.NullInt64{Int64: 0, Valid: true},
+		Retries:            sql.NullInt64{Int64: 2, Valid: true},
 		RetryDelay:         NullDuration{Duration: 100000000, Valid: true},
 		ExponentialBackoff: sql.NullBool{Bool: true, Valid: true},
 		RetryJitter:        sql.NullBool{Bool: true, Valid: true},
