@@ -21,15 +21,16 @@ type NullDuration struct {
 
 var (
 	defaultSettings = Settings{
-		Scheme:        sql.NullString{String: "https", Valid: true},
-		Host:          sql.NullString{String: "localhost", Valid: true},
-		Port:          sql.NullInt64{Int64: 443, Valid: true},
-		BasePath:      sql.NullString{String: "", Valid: true},
-		Headers:       make(map[string]string),
-		Parameters:    make(map[string]string),
-		Queries:       make(map[string]string),
-		Username:      sql.NullString{String: "", Valid: true},
-		Password:      sql.NullString{String: "", Valid: true},
+		Scheme:     sql.NullString{String: "https", Valid: true},
+		Host:       sql.NullString{String: "localhost", Valid: true},
+		Port:       sql.NullInt64{Int64: 443, Valid: true},
+		BasePath:   sql.NullString{String: "", Valid: true},
+		Headers:    make(map[string]string),
+		Parameters: make(map[string]string),
+		Queries:    make(map[string]string),
+		Username:   sql.NullString{String: "", Valid: true},
+		Password:   sql.NullString{String: "", Valid: true},
+
 		Pretty:        sql.NullBool{Bool: false, Valid: true},
 		PrettyIndent:  sql.NullString{String: "\t", Valid: true},
 		Filter:        sql.NullString{String: "", Valid: true},
@@ -89,10 +90,12 @@ func (s *Settings) Merge(other Settings) {
 	mergeMap(s.Queries, other.Queries)
 	mergeString(&s.Username, other.Username)
 	mergeString(&s.Password, other.Password)
+
 	mergeBool(&s.Pretty, other.Pretty)
 	mergeString(&s.PrettyIndent, other.PrettyIndent)
 	mergeString(&s.Filter, other.Filter)
 	mergeMap(s.SetParameters, other.SetParameters)
+
 	mergeInt(&s.Retries, other.Retries)
 	mergeDuration(&s.RetryDelay, other.RetryDelay)
 	mergeBool(&s.ExponentialBackoff, other.ExponentialBackoff)
@@ -233,19 +236,19 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
-	if err := writeBool(b, "pretty", s.Pretty); err != nil {
+	if err := writeBool(b, "output.pretty", s.Pretty); err != nil {
 		return err
 	}
 
-	if err := writeString(b, "pretty-indent", s.PrettyIndent); err != nil {
+	if err := writeString(b, "output.pretty-indent", s.PrettyIndent); err != nil {
 		return err
 	}
 
-	if err := writeString(b, "filter", s.Filter); err != nil {
+	if err := writeString(b, "output.filter", s.Filter); err != nil {
 		return err
 	}
 
-	if err := writeMap(b, "set-parameters", s.SetParameters); err != nil {
+	if err := writeMap(b, "output.set-parameters", s.SetParameters); err != nil {
 		return err
 	}
 
@@ -279,10 +282,10 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	bucketMap(b.Bucket([]byte("queries")), &s.Queries)
 	s.Username = readString(b, "username")
 	s.Password = readString(b, "password")
-	s.Pretty = readBool(b, "pretty")
-	s.PrettyIndent = readString(b, "pretty-indent")
-	s.Filter = readString(b, "filter")
-	bucketMap(b.Bucket([]byte("set-parameters")), &s.SetParameters)
+	s.Pretty = readBool(b, "output.pretty")
+	s.PrettyIndent = readString(b, "output.pretty-indent")
+	s.Filter = readString(b, "output.filter")
+	bucketMap(b.Bucket([]byte("output.set-parameters")), &s.SetParameters)
 	s.Retries = readInt(b, "retry.retries")
 	s.RetryDelay = readDuration(b, "retry.delay")
 	s.ExponentialBackoff = readBool(b, "retry.exponential-backoff")
