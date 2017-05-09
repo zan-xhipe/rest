@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -248,19 +249,19 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
-	if err := writeInt(b, "retries", s.Retries); err != nil {
+	if err := writeInt(b, "retry.retries", s.Retries); err != nil {
 		return err
 	}
 
-	if err := writeDuration(b, "retry-delay", s.RetryDelay); err != nil {
+	if err := writeDuration(b, "retry.delay", s.RetryDelay); err != nil {
 		return err
 	}
 
-	if err := writeBool(b, "exponential-backoff", s.ExponentialBackoff); err != nil {
+	if err := writeBool(b, "retry.exponential-backoff", s.ExponentialBackoff); err != nil {
 		return err
 	}
 
-	if err := writeBool(b, "retry-jitter", s.RetryJitter); err != nil {
+	if err := writeBool(b, "retry.jitter", s.RetryJitter); err != nil {
 		return err
 	}
 
@@ -282,10 +283,10 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	s.PrettyIndent = readString(b, "pretty-indent")
 	s.Filter = readString(b, "filter")
 	bucketMap(b.Bucket([]byte("set-parameters")), &s.SetParameters)
-	s.Retries = readInt(b, "retries")
-	s.RetryDelay = readDuration(b, "retry-delay")
-	s.ExponentialBackoff = readBool(b, "exponential-backoff")
-	s.RetryJitter = readBool(b, "retry-jitter")
+	s.Retries = readInt(b, "retry.retries")
+	s.RetryDelay = readDuration(b, "retry.delay")
+	s.ExponentialBackoff = readBool(b, "retry.exponential-backoff")
+	s.RetryJitter = readBool(b, "retry.jitter")
 }
 
 // URL for the service
@@ -303,12 +304,30 @@ func LoadSettings(b *bolt.Bucket) Settings {
 	return s
 }
 
+func write(b *bolt.Bucket, key, value string) error {
+	var err error
+
+	k := strings.Split(key, ".")
+	for i := range k {
+		if i == len(k)-1 {
+			return b.Put([]byte(k[len(k)-1]), []byte(value))
+		}
+
+		b, err = b.CreateBucketIfNotExists([]byte(k[i]))
+		if err != nil {
+			return err
+		}
+	}
+
+	return fmt.Errorf("didn't put value %s into %s", value, key)
+}
+
 func writeString(b *bolt.Bucket, key string, value sql.NullString) error {
 	if !value.Valid {
 		return nil
 	}
 
-	return b.Put([]byte(key), []byte(value.String))
+	return write(b, key, value.String)
 }
 
 func writeInt(b *bolt.Bucket, key string, value sql.NullInt64) error {
@@ -316,7 +335,7 @@ func writeInt(b *bolt.Bucket, key string, value sql.NullInt64) error {
 		return nil
 	}
 
-	return b.Put([]byte(key), []byte(strconv.Itoa(int(value.Int64))))
+	return write(b, key, strconv.Itoa(int(value.Int64)))
 }
 
 func writeBool(b *bolt.Bucket, key string, value sql.NullBool) error {
@@ -324,7 +343,7 @@ func writeBool(b *bolt.Bucket, key string, value sql.NullBool) error {
 		return nil
 	}
 
-	return b.Put([]byte(key), []byte(fmt.Sprint(value.Bool)))
+	return write(b, key, fmt.Sprint(value.Bool))
 }
 
 func writeMap(b *bolt.Bucket, key string, data map[string]string) error {
@@ -347,11 +366,28 @@ func writeDuration(b *bolt.Bucket, key string, value NullDuration) error {
 		return nil
 	}
 
-	return b.Put([]byte(key), []byte(fmt.Sprint(value.Duration)))
+	return write(b, key, fmt.Sprint(value.Duration))
+}
+
+func read(b *bolt.Bucket, key string) []byte {
+	k := strings.Split(key, ".")
+	last := len(k) - 1
+	for i := range k {
+		if i == last {
+			return b.Get([]byte(k[last]))
+		}
+
+		b = b.Bucket([]byte(k[i]))
+		if b == nil {
+			return nil
+		}
+	}
+
+	return nil
 }
 
 func readString(b *bolt.Bucket, key string) sql.NullString {
-	v := b.Get([]byte(key))
+	v := read(b, key)
 	if v == nil {
 		return sql.NullString{}
 	}
@@ -360,7 +396,7 @@ func readString(b *bolt.Bucket, key string) sql.NullString {
 }
 
 func readInt(b *bolt.Bucket, key string) sql.NullInt64 {
-	v := b.Get([]byte(key))
+	v := read(b, key)
 	if v == nil {
 		return sql.NullInt64{}
 	}
@@ -374,7 +410,7 @@ func readInt(b *bolt.Bucket, key string) sql.NullInt64 {
 }
 
 func readBool(b *bolt.Bucket, key string) sql.NullBool {
-	v := b.Get([]byte(key))
+	v := read(b, key)
 	if v == nil {
 		return sql.NullBool{}
 	}
@@ -388,7 +424,7 @@ func readBool(b *bolt.Bucket, key string) sql.NullBool {
 }
 
 func readDuration(b *bolt.Bucket, key string) NullDuration {
-	v := b.Get([]byte(key))
+	v := read(b, key)
 	if v == nil {
 		return NullDuration{}
 	}
