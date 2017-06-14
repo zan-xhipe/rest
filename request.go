@@ -132,7 +132,8 @@ func (r *Request) Prepare() (*http.Request, error) {
 		return nil, err
 	}
 
-	if r.Settings.Username.Valid && r.Settings.Password.Valid {
+	if r.Settings.Username.Valid && r.Settings.Password.Valid &&
+		r.Settings.Username.String != "" && r.Settings.Password.String != "" {
 		req.SetBasicAuth(r.Settings.Username.String, r.Settings.Password.String)
 	}
 
