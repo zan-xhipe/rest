@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
 	"net/http"
@@ -122,11 +123,17 @@ func (r *Request) Prepare() (*http.Request, error) {
 		r.URL.RawQuery = q.Encode()
 	}
 
+	// don't send the body if it's empty
+	var data io.Reader
+	if r.Data != "" {
+		data = strings.NewReader(r.Data)
+	}
+
 	// prepare the request
 	req, err := http.NewRequest(
 		strings.ToUpper(r.Method),
 		r.URL.String(),
-		strings.NewReader(r.Data),
+		data,
 	)
 	if err != nil {
 		return nil, err
