@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -25,6 +26,7 @@ func init() {
 	kingpin.Version(versionNumber)
 	kingpin.Flag("verbose", "Verbose mode").Short('v').CounterVar(&verbLevel)
 	kingpin.UsageTemplate(usageTemplate)
+	log.SetFlags(0)
 }
 
 func main() {
@@ -33,7 +35,7 @@ func main() {
 	var err error
 	db, err = bolt.Open(dbFile, 0600, nil)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		os.Exit(1)
 	}
 	defer db.Close()
@@ -43,43 +45,43 @@ func main() {
 		fmt.Println(versionNumber)
 	case "service init":
 		if err := initService(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 	case "service remove":
 		if err := removeService(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 	case "service list":
 		if err := listServices(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 	case "service set":
 		if err := setValue(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 
 	case "service unset":
 		if err := unsetValue(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 	case "service use":
 		if err := useService(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 	case "service config":
 		if err := displayConfig(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 	case "service alias":
 		if err := addAlias(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			os.Exit(1)
 		}
 
@@ -98,13 +100,13 @@ func Do(command string) {
 
 	resp, err := request.Perform()
 	if err != nil {
-		fmt.Println("error making request:", err)
+		log.Println("error making request:", err)
 		os.Exit(1)
 	}
 
 	response.verbose = verbLevel
 	if err := response.Load(resp, request.Settings); err != nil {
-		fmt.Println("error displaying result:", err)
+		log.Println("error displaying result:", err)
 		os.Exit(1)
 	}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -37,7 +38,7 @@ func (r *Response) Load(resp *http.Response, s Settings) error {
 
 	switch r.verbose {
 	case 1:
-		fmt.Println(r.resp.Status)
+		log.Println(r.resp.Status)
 	case 2, 3:
 		// at level 3 display the raw response
 		extra := false
@@ -48,10 +49,10 @@ func (r *Response) Load(resp *http.Response, s Settings) error {
 		dump, err := httputil.DumpResponse(r.resp, extra)
 		if err != nil {
 			// this is only the verbose logging, so carry on in case of error
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
-		fmt.Println(string(dump))
+		log.Println(string(dump))
 	}
 
 	defer resp.Body.Close()

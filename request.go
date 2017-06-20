@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"math"
 	"math/rand"
 	"net/http"
@@ -44,7 +44,7 @@ func (r *Request) Perform() (*http.Response, error) {
 
 	switch r.verbose {
 	case 1:
-		fmt.Println(request.URL.String())
+		log.Println(request.URL.String())
 	case 2, 3:
 		// at level 3 display the raw request
 		extra := false
@@ -55,10 +55,10 @@ func (r *Request) Perform() (*http.Response, error) {
 		dump, err := httputil.DumpRequestOut(req, extra)
 		if err != nil {
 			// this is only the verbose logging, so carry on in case of error
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
-		fmt.Println(string(dump))
+		log.Println(string(dump))
 	}
 
 	return r.retry(req)
@@ -74,7 +74,7 @@ func (r *Request) retry(req *http.Request) (*http.Response, error) {
 	for i := 0; i < maxAttempts; i++ {
 
 		if r.verbose > 0 {
-			fmt.Printf("attempt %d: %s %s\n", i, req.Method, req.URL)
+			log.Printf("attempt %d: %s %s\n", i, req.Method, req.URL)
 		}
 
 		resp, err = client.Do(req)
@@ -94,7 +94,7 @@ func (r *Request) retry(req *http.Request) (*http.Response, error) {
 		}
 
 		if r.verbose > 0 && delay > 0 && i < maxAttempts {
-			fmt.Printf("waiting %s to retry\n", delay)
+			log.Printf("waiting %s to retry\n", delay)
 		}
 		<-time.After(delay)
 	}
