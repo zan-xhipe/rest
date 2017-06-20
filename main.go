@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -42,7 +43,7 @@ func main() {
 
 	switch command {
 	case "version":
-		fmt.Println(versionNumber)
+		displayVersion()
 	case "service init":
 		if err := initService(); err != nil {
 			log.Println(err)
@@ -142,6 +143,32 @@ func useService() error {
 	})
 
 	return err
+}
+
+func displayVersion() {
+	var dbVersion string
+	noDB := errors.New("no db")
+	db.View(func(tx *bolt.Tx) error {
+		info := tx.Bucket([]byte("info"))
+		if info == nil {
+			return noDB
+		}
+
+		v := info.Get([]byte("version"))
+		if v == nil {
+			return noDB
+		}
+
+		dbVersion = string(v)
+		return nil
+	})
+
+	if dbVersion == "" || versionNumber == dbVersion {
+		fmt.Println(versionNumber)
+	} else {
+		fmt.Printf("%s, db: %s, version don't match, the database will have to be updated", versionNumber, dbVersion)
+	}
+
 }
 
 func usedFlag(b *bool) func(*kingpin.ParseContext) error {

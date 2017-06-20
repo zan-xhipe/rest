@@ -48,10 +48,15 @@ func initService() error {
 		}
 
 		// if this is the first service to be set then set then also make it current service
+		// and initialise the db
 		info := tx.Bucket([]byte("info"))
 		if info == nil {
 			info, err = tx.CreateBucket([]byte("info"))
 			if err != nil {
+				return err
+			}
+
+			if err := info.Put([]byte("version"), []byte(versionNumber)); err != nil {
 				return err
 			}
 
