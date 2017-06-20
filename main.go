@@ -85,7 +85,7 @@ func main() {
 			os.Exit(1)
 		}
 
-	case "get", "post", "put", "delete":
+	case "get", "post", "put", "delete", "patch", "options", "head":
 		Do(command)
 
 	default:

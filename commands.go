@@ -18,14 +18,20 @@ var (
 	get    = kingpin.Command("get", "Perform a GET request")
 	post   = kingpin.Command("post", "Perform a POST request")
 	put    = kingpin.Command("put", "Perform a PUT request")
+	patch  = kingpin.Command("patch", "Perform a PATCH request")
 	delete = kingpin.Command("delete", "Perform a DELETE request")
+	option = kingpin.Command("options", "Perform an OPTIONS request")
+	head   = kingpin.Command("head", "Perform a HEAD request")
 )
 
 func init() {
 	requestMethod(get)
 	requestDataMethod(post)
 	requestDataMethod(put)
+	requestDataMethod(patch)
 	requestMethod(delete)
+	requestMethod(option)
+	requestMethod(head)
 }
 
 // requestFlags apply to all the basic request types
