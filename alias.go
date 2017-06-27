@@ -9,7 +9,6 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/boltdb/bolt"
-	homedir "github.com/mitchellh/go-homedir"
 )
 
 var (
@@ -17,7 +16,7 @@ var (
 	aliasParams      map[string]map[string]*string
 )
 
-func init() {
+func addAliases() {
 	action.Arg("name", "name for the alias action").
 		Required().
 		StringVar(&request.Alias)
@@ -32,12 +31,6 @@ func init() {
 		StringVar(&aliasDescription)
 
 	settings.Flags(action, false)
-
-	dir, err := homedir.Dir()
-	if err != nil {
-		panic(err)
-	}
-	dbFile = fmt.Sprintf("%s/%s", dir, ".rest.db")
 
 	aliasParams = make(map[string]map[string]*string)
 

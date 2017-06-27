@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/boltdb/bolt"
+	homedir "github.com/mitchellh/go-homedir"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -24,10 +25,18 @@ var (
 )
 
 func init() {
+	dir, err := homedir.Dir()
+	if err != nil {
+		panic(err)
+	}
+	dbFile = fmt.Sprintf("%s/%s", dir, ".rest.db")
+
 	kingpin.Version(versionNumber)
 	kingpin.Flag("verbose", "Verbose mode").Short('v').CounterVar(&verbLevel)
 	kingpin.UsageTemplate(usageTemplate)
 	log.SetFlags(0)
+
+	addAliases()
 }
 
 func main() {
