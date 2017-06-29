@@ -67,6 +67,9 @@ You can filtered any returned json with the [JMESPath](http://jmespath.org/) jso
 
 You can also pretty print output with the ```--pretty``` flag.  If you filter the output to a string you can remove the quotes around the string by also providing the pretty flag.
 
+# Lua Hooks
+You can process the returned response with lua scripts.  This allows you to perform more processing than just the JMESPath filtering will allow.  There are three places that your lua can be execute. ```response-hook``` is called once the response has been received but before any filtering has been applied.  ```pre-filter-hook``` is called before filtering takes place, it is only called if you are indeed filtering the response.  ```post-filter-hook``` is called after filtering has been applied, it is only called if you are actually filtering the response.  The response is stored in the ```response``` varible in lua, store the output of your processing in response again for it to be passed to the next step.  If you don't want to alter the response, but just want to output something along with the response you can print it from the lua hook.  This will appear before the response text.  There are two helper functions already loaded in the lua environment ```json.decode``` and ```json.encode``` to make it easier to interact with json responses.  Each hook is a fresh lua environment.
+
 # Storing Settings
 Various settings can be stored for each service you want to use.  Settings can be set per path, per path access with a particular method, or per alias.  By default settings apply to the current service. 
 
@@ -148,6 +151,16 @@ rest service alias stargazers get repos/:user/:repo/stargazers \
 	--description 'List all users who have starred :repo'
 
 rest stargazers --repo <repo-name>
+```
+
+Now lets create an alias that will just tell us how many stars the repo has instead of listing everyone who starred it.  We will do this by using a lua hook.
+
+```
+rest service alias stargazers-count get repos/:user/:repo/stargazers \
+	--description 'How many users have starred :repo' \
+	--response-hook 'r = json.decode(response); count = 0; for _ in pairs(r) do count = count + 1 end; response = count'
+
+rest stargazers-count --repo <repo-name>
 ```
 
 # Todo
