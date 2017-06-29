@@ -20,10 +20,13 @@ type Response struct {
 
 	resp *http.Response
 
-	Filter        string
-	Pretty        bool
-	PrettyIndent  string
-	SetParameters map[string]string
+	ResponseHook   string
+	PreFilterHook  string
+	Filter         string
+	PostFilterHook string
+	Pretty         bool
+	PrettyIndent   string
+	SetParameters  map[string]string
 
 	verbose int
 }
@@ -31,9 +34,12 @@ type Response struct {
 func (r *Response) Load(resp *http.Response, s Settings) error {
 	r.resp = resp
 
+	r.ResponseHook = s.ResponseHook.String
 	r.Pretty = s.Pretty.Bool
 	r.PrettyIndent = s.PrettyIndent.String
+	r.PreFilterHook = s.PreFilterHook.String
 	r.Filter = s.Filter.String
+	r.PostFilterHook = s.PostFilterHook.String
 	r.SetParameters = s.SetParameters
 
 	switch r.verbose {
@@ -73,6 +79,16 @@ func (r Response) String() string {
 }
 
 func (r *Response) Prepare() error {
+	r.display = r.Raw
+
+	if r.ResponseHook != "" {
+		temp, err := hook(r.ResponseHook, string(r.display))
+		if err != nil {
+			return err
+		}
+		r.display = []byte(temp)
+	}
+
 	switch {
 	case r.Filter != "":
 		if err := r.filter(); err != nil {
@@ -80,7 +96,7 @@ func (r *Response) Prepare() error {
 		}
 	case r.Pretty:
 		var msg json.RawMessage
-		err := json.Unmarshal(r.Raw, &msg)
+		err := json.Unmarshal(r.display, &msg)
 		if err != nil {
 			return err
 		}
@@ -89,8 +105,6 @@ func (r *Response) Prepare() error {
 		if err != nil {
 			return err
 		}
-	default:
-		r.display = r.Raw
 	}
 
 	if err := r.setParameters(); err != nil {
@@ -101,11 +115,22 @@ func (r *Response) Prepare() error {
 }
 
 func (r *Response) filter() error {
-	var err error
-	r.display, err = filter(r.Raw, r.Filter, r.Pretty, r.PrettyIndent)
+	pre, err := hook(r.PreFilterHook, string(r.display))
 	if err != nil {
 		return err
 	}
+
+	filtered, err := filter([]byte(pre), r.Filter, r.Pretty, r.PrettyIndent)
+	if err != nil {
+		return err
+	}
+
+	post, err := hook(r.PostFilterHook, string(filtered))
+	if err != nil {
+		return err
+	}
+
+	r.display = []byte(post)
 
 	return nil
 }
