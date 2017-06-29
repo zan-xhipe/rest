@@ -29,7 +29,10 @@ func init() {
 		Required().
 		StringVar(&configKey)
 
-	use.Arg("service", "the service to use").Required().StringVar(&request.Service)
+	use.Arg("service", "the service to use").
+		HintAction(hintServices).
+		Required().
+		StringVar(&request.Service)
 
 }
 
@@ -124,6 +127,33 @@ func listServices() error {
 			return nil
 		})
 	})
+}
+
+func hintServices() []string {
+	hints := make([]string, 0)
+
+	db, err := bolt.Open(dbFile, 0600, nil)
+	if err != nil {
+		// no hints to provide
+		return nil
+	}
+	defer db.Close()
+
+	// ignore errors as this is just to provide hints, if there are any
+	// then just provide no hints
+	_ = db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("services"))
+		if b == nil {
+			return ErrMalformedDB{Bucket: "services"}
+		}
+
+		return b.ForEach(func(key, _ []byte) error {
+			hints = append(hints, string(key))
+			return nil
+		})
+	})
+
+	return hints
 }
 
 func setValue() error {
