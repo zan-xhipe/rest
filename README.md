@@ -76,8 +76,25 @@ The ```request-data-hook``` puts the provided post body into ```data``` string i
 
 The ```request-hook``` allows gives you access to most parts of the request before it is made.  It puts the request in the ```request``` table.  ```request.path``` contains the path, ```request.data``` contains the post body, ```request.queries``` is a table containing the query parameters, and ```request.headers``` is a table containing the headers.  This hooks runs after parameter replacement.
 
+All the lua hooks run in the same lua environment so if you can access previous hooks variables, however if the hook doesn't run then its data isn't populated.  If the hook is an empty string it will not run so to run a hook without doing anything pass it ```';'```.
 
-There are two helper functions already loaded in the lua environment ```json.decode``` and ```json.encode``` to make it easier to interact with json responses.  All the lua hooks run in the same lua environment so if you can access previous hooks variables, however if the hook doesn't run then its data isn't populated.  If the hook is an empty string it will not run so to run a hook without doing anything pass it ```';'```.
+## Lua helper functions
+There are several lua helper functions preloaded into the lua hook environment.  If you think that other functions should be included, open an issue.  Ideally these will all eventually be written in gopher-lua
+
+* ```json.decode(t)``` Turn json string into a lua table
+* ```json.encode(t) ``` Turn lua table into json string
+* ```table.contains(t, value)``` Returns true if the table contains the specified value.
+* ```table.extract(arr, fname)```  Enumerates an array of objects and returns a new table containing only the value of one particular field.
+* ```table.flatten(arr)``` Flattens a hierarchy of tables into a single array containing all of the values.
+* ```table.implode(arr, before, after, between)``` Merges an array of items into a string.
+* ```table.isempty(t)``` Returns true if the table is empty, and contains no indexed or keyed values.
+* ```table.join(...)``` Adds the values from one array to the end of another and returns the result.
+* ```table.keys(tbl)``` Return a list of all keys used in a table.
+* ```table.translate(arr, translation)``` Translates the values contained in array, using the specified translation table, and returns the results in a new array.
+* ```table.print(tt, indent, done)``` Print anything - including nested tables
+* ```table.length(tbl)``` Returns number of  elements in the table
+
+There are two helper functions already loaded in the lua environment ```json.decode``` and ```json.encode``` to make it easier to interact with json responses.  
 
 # Storing Settings
 Various settings can be stored for each service you want to use.  Settings can be set per path, per path access with a particular method, or per alias.  By default settings apply to the current service. 
@@ -165,11 +182,11 @@ rest stargazers --repo <repo-name>
 Now lets create an alias that will just tell us how many stars the repo has instead of listing everyone who starred it.  We will do this by using a lua hook.
 
 ```
-rest service alias stargazers-count get repos/:user/:repo/stargazers \
+rest service alias stars get repos/:user/:repo/stargazers \
 	--description 'How many users have starred :repo' \
-	--response-hook 'r = json.decode(response); count = 0; for _ in pairs(r) do count = count + 1 end; response = count'
+	--response-hook 'response.body = table.length(json.decode(response.body))'
 
-rest stargazers-count --repo <repo-name>
+rest stars --repo <repo-name>
 ```
 
 # Todo
