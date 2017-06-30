@@ -55,6 +55,12 @@ func requestFlags(cmd *kingpin.CmdClause, hide bool) {
 	}
 	nq.BoolVar(&request.NoQueries)
 
+	dryRun := cmd.Flag("dry-run", "display entire request but don't perform it")
+	if hide {
+		dryRun.Hidden()
+	}
+	dryRun.BoolVar(&request.DryRun)
+
 	settings = NewSettings()
 	settings.Flags(cmd, hide)
 }

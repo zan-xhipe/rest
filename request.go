@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -24,6 +26,7 @@ type Request struct {
 	Settings  Settings
 	NoQueries bool
 	NoHeaders bool
+	DryRun    bool
 
 	RequestDataHook string
 
@@ -42,6 +45,15 @@ func (r *Request) Perform() (*http.Response, error) {
 	req, err := r.Prepare()
 	if err != nil {
 		return nil, err
+	}
+
+	if r.DryRun {
+		dump, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(string(dump))
+		os.Exit(0)
 	}
 
 	switch r.verbose {
