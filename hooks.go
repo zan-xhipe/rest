@@ -24,9 +24,13 @@ func (r *Response) hook() error {
 		return nil
 	}
 
+	if luaState == nil {
+		luaState = lua.NewState()
+	}
+	L := luaState
+
 	r.ranHook = true
-	L := lua.NewState()
-	defer L.Close()
+
 	if err := L.DoString(luahelpers.JSONLua); err != nil {
 		return ErrHook{Context: "loading json helper", Err: err}
 	}
@@ -99,8 +103,11 @@ func (r *Request) dataHook() error {
 		return nil
 	}
 
-	L := lua.NewState()
-	defer L.Close()
+	if luaState == nil {
+		luaState = lua.NewState()
+	}
+	L := luaState
+
 	if err := L.DoString(luahelpers.JSONLua); err != nil {
 		return ErrHook{Context: "loading json helper", Err: err}
 	}
@@ -117,8 +124,11 @@ func (r *Request) hook() error {
 		return nil
 	}
 
-	L := lua.NewState()
-	defer L.Close()
+	if luaState == nil {
+		luaState = lua.NewState()
+	}
+	L := luaState
+
 	if err := L.DoString(luahelpers.JSONLua); err != nil {
 		return ErrHook{Context: "loading json helper", Err: err}
 	}

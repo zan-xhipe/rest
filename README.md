@@ -77,7 +77,7 @@ The ```request-data-hook``` puts the provided post body into ```data``` string i
 The ```request-hook``` allows gives you access to most parts of the request before it is made.  It puts the request in the ```request``` table.  ```request.path``` contains the path, ```request.data``` contains the post body, ```request.queries``` is a table containing the query parameters, and ```request.headers``` is a table containing the headers.  This hooks runs after parameter replacement.
 
 
-There are two helper functions already loaded in the lua environment ```json.decode``` and ```json.encode``` to make it easier to interact with json responses.  Each hook runs in an isolated lua environment, though this may change later.
+There are two helper functions already loaded in the lua environment ```json.decode``` and ```json.encode``` to make it easier to interact with json responses.  All the lua hooks run in the same lua environment so if you can access previous hooks variables, however if the hook doesn't run then its data isn't populated.  If the hook is an empty string it will not run so to run a hook without doing anything pass it ```';'```.
 
 # Storing Settings
 Various settings can be stored for each service you want to use.  Settings can be set per path, per path access with a particular method, or per alias.  By default settings apply to the current service. 

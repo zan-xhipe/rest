@@ -49,6 +49,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
+	defer luaState.Close()
 
 	switch command {
 	case "version":
