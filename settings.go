@@ -38,6 +38,7 @@ var (
 
 		ResponseHook:    sql.NullString{String: "", Valid: true},
 		RequestDataHook: sql.NullString{String: "", Valid: true},
+		RequestHook:     sql.NullString{String: "", Valid: true},
 
 		Retries:            sql.NullInt64{Int64: 2, Valid: true},
 		RetryDelay:         NullDuration{Duration: 100000000, Valid: true},
@@ -69,6 +70,7 @@ type Settings struct {
 	// hooks
 	ResponseHook    sql.NullString
 	RequestDataHook sql.NullString
+	RequestHook     sql.NullString
 
 	Retries            sql.NullInt64
 	RetryDelay         NullDuration
@@ -105,6 +107,7 @@ func (s *Settings) Merge(other Settings) {
 
 	mergeString(&s.ResponseHook, other.ResponseHook)
 	mergeString(&s.RequestDataHook, other.RequestDataHook)
+	mergeString(&s.RequestHook, other.RequestHook)
 
 	mergeInt(&s.Retries, other.Retries)
 	mergeDuration(&s.RetryDelay, other.RetryDelay)
@@ -201,6 +204,7 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause, hide bool) {
 
 	stringFlag("response-hook", "run lua script on response, happens before filtering", "", &s.ResponseHook)
 	stringFlag("request-data-hook", "run lua script on request data, happens before parameter replacement", "", &s.RequestDataHook)
+	stringFlag("request-hook", "run lua script on the entire request, happens after parameter replacement", "", &s.RequestHook)
 
 	intFlag("retries", "how many times to retry the command if it fails", "", &s.Retries)
 	durationFlag("retry-delay", "how long to wait between retries, accepts a duration", df.RetryDelay.Duration, &s.RetryDelay)
@@ -273,6 +277,10 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
+	if err := writeString(b, "request-hook", s.RequestHook); err != nil {
+		return err
+	}
+
 	if err := writeInt(b, "retry.retries", s.Retries); err != nil {
 		return err
 	}
@@ -309,6 +317,8 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	bucketMap(b.Bucket([]byte("output.set-parameters")), &s.SetParameters)
 	s.ResponseHook = readString(b, "output.response-hook")
 	s.RequestDataHook = readString(b, "request-data-hook")
+	s.RequestHook = readString(b, "request-hook")
+
 	s.Retries = readInt(b, "retry.retries")
 	s.RetryDelay = readDuration(b, "retry.delay")
 	s.ExponentialBackoff = readBool(b, "retry.exponential-backoff")

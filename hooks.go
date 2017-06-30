@@ -111,3 +111,70 @@ func (r *Request) dataHook() error {
 	r.Data = L.GetGlobal("data").String()
 	return nil
 }
+
+func (r *Request) hook() error {
+	if r.RequestHook == "" {
+		return nil
+	}
+
+	L := lua.NewState()
+	defer L.Close()
+	if err := L.DoString(luahelpers.JSONLua); err != nil {
+		return ErrHook{Context: "loading json helper", Err: err}
+	}
+	t := L.NewTable()
+	t.RawSetString("path", lua.LString(r.URL.Path))
+	t.RawSetString("data", lua.LString(r.Data))
+	q := L.NewTable()
+	for key, value := range r.URL.Query() {
+		q.RawSetString(key, stringSliceToLua(L, value))
+	}
+	t.RawSetString("queries", q)
+	h := L.NewTable()
+	for key, value := range r.Settings.Headers {
+		q.RawSetString(key, lua.LString(value))
+	}
+	t.RawSetString("headers", h)
+	L.SetGlobal("request", t)
+
+	if err := L.DoString(r.RequestHook); err != nil {
+		return ErrHook{Context: "perform request hook code", Err: err}
+	}
+
+	var ok bool
+	t, ok = L.GetGlobal("request").(*lua.LTable)
+	if !ok {
+		return ErrHook{Context: "returning request", Err: errors.New("expected request to be a table")}
+	}
+	r.URL.Path = t.RawGetString("path").String()
+	r.Data = t.RawGetString("data").String()
+	queries, ok := t.RawGetString("queries").(*lua.LTable)
+	if !ok {
+		return ErrHook{Context: "returning request", Err: errors.New("expeted a table in queries")}
+	}
+
+	r.URL.RawQuery = ""
+	qi := r.URL.Query()
+	queries.ForEach(func(key, value lua.LValue) {
+		qi.Set(key.String(), value.String())
+	})
+
+	headers, ok := t.RawGetString("headers").(*lua.LTable)
+	if !ok {
+		return ErrHook{Context: "returning request", Err: errors.New("expected a table in headers")}
+	}
+	r.Settings.Headers = make(map[string]string)
+	headers.ForEach(func(key, value lua.LValue) {
+		r.Settings.Headers[key.String()] = value.String()
+	})
+
+	return nil
+}
+
+func stringSliceToLua(L *lua.LState, s []string) *lua.LTable {
+	v := L.NewTable()
+	for i := range s {
+		v.Append(lua.LString(s[i]))
+	}
+	return v
+}

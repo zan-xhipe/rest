@@ -29,10 +29,13 @@ type Request struct {
 	DryRun    bool
 
 	RequestDataHook string
+	RequestHook     string
 
 	Alias string
 
 	URL url.URL
+
+	req *http.Request
 
 	verbose int
 }
@@ -120,6 +123,7 @@ func (r *Request) retry(req *http.Request) (*http.Response, error) {
 // addd all the headers and query parameters
 func (r *Request) Prepare() (*http.Request, error) {
 	r.RequestDataHook = r.Settings.RequestDataHook.String
+	r.RequestHook = r.Settings.RequestHook.String
 
 	// prepare the url
 	r.URL = r.Settings.URL()
@@ -140,6 +144,10 @@ func (r *Request) Prepare() (*http.Request, error) {
 			}
 		}
 		r.URL.RawQuery = q.Encode()
+	}
+
+	if err := r.hook(); err != nil {
+		return nil, err
 	}
 
 	// don't send the body if it's empty

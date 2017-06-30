@@ -8,6 +8,8 @@ The adaptive part of the description comes from being able to create aliases for
 
 It is also designed to interact nicely with other command line tools, as such is has inbuilt ability to filter any json response it receives using the [JMESPath](http://jmespath.org/) query language.
 
+If you want to do more complex processing than json filtering you can run lua hooks at various points in the request/response process, these hooks can alter the data you send and display in arbitrary ways.
+
 to get it run
 ```go get -u github.com/zan-xhipe/rest```
 
@@ -68,7 +70,11 @@ You can filtered any returned json with the [JMESPath](http://jmespath.org/) jso
 You can also pretty print output with the ```--pretty``` flag.  If you filter the output to a string you can remove the quotes around the string by also providing the pretty flag.
 
 # Lua Hooks
-You can process the returned response with lua scripts.  This allows you to perform more processing than just the JMESPath filtering will allow.  There are three places that your lua can be execute. ```response-hook``` is called once the response has been received but before any filtering has been applied.  The response is stored in the ```response``` table in lua.  It ```response.status``` stores the status code, ```response.headers``` contains all the headers, and ```response.body``` contains the response body.  store the output of your processing in ```response.body``` again for it to be displayed.  If you don't want to alter the response, but just want to output something along with the response you can print it from the lua hook.  This will appear before the response text.  The ```request-data-hook``` puts the provided post body into ```data``` string in lua.  If you want to affect the data sent put your result back in ```data```.  This hook runs before parameter replacement is done on the request body.
+You can process the returned response with lua scripts.  This allows you to perform more processing than just the JMESPath filtering will allow.  There are three places that your lua can be execute. ```response-hook``` is called once the response has been received but before any filtering has been applied.  The response is stored in the ```response``` table in lua.  It ```response.status``` stores the status code, ```response.headers``` contains all the headers, and ```response.body``` contains the response body.  store the output of your processing in ```response.body``` again for it to be displayed.  If you don't want to alter the response, but just want to output something along with the response you can print it from the lua hook.  This will appear before the response text.
+
+The ```request-data-hook``` puts the provided post body into ```data``` string in lua.  If you want to affect the data sent put your result back in ```data```.  This hook runs before parameter replacement is done on the request body.
+
+The ```request-hook``` allows gives you access to most parts of the request before it is made.  It puts the request in the ```request``` table.  ```request.path``` contains the path, ```request.data``` contains the post body, ```request.queries``` is a table containing the query parameters, and ```request.headers``` is a table containing the headers.  This hooks runs after parameter replacement.
 
 
 There are two helper functions already loaded in the lua environment ```json.decode``` and ```json.encode``` to make it easier to interact with json responses.  Each hook runs in an isolated lua environment, though this may change later.
