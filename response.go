@@ -27,6 +27,8 @@ type Response struct {
 	SetParameters map[string]string
 
 	verbose int
+
+	ranHook bool
 }
 
 func (r *Response) Load(resp *http.Response, s Settings) error {
@@ -76,13 +78,8 @@ func (r Response) String() string {
 
 func (r *Response) Prepare() error {
 	r.display = r.Raw
-
-	if r.ResponseHook != "" {
-		temp, err := hook(r.ResponseHook, string(r.display))
-		if err != nil {
-			return err
-		}
-		r.display = []byte(temp)
+	if err := r.hook(); err != nil {
+		return err
 	}
 
 	switch {
@@ -94,6 +91,12 @@ func (r *Response) Prepare() error {
 		var msg json.RawMessage
 		err := json.Unmarshal(r.display, &msg)
 		if err != nil {
+			// TODO: find a cleaner way of displaying this message
+			// probably something with using a more advanced error type
+			// so that all the printing happens in one place
+			if r.ranHook {
+				log.Println("you are attempting to pretty print json after running a hook, if this is not supposed to output json run with --no-pretty to turn off json pretty printing")
+			}
 			return err
 		}
 
