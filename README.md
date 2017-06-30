@@ -192,5 +192,15 @@ rest stars --repo <repo-name>
 # Todo
 - Figure out how to interact sensibly with hypermedia
 
+# Bash/ZSH Shell Completion
+Rest is built on kingpin which provides bash/ZSH completion.  To enable completion add the following to your  bash_profile (or equivalent):
+
+```eval "$(your-cli-tool --completion-script-bash)"```
+
+Or for ZSH
+
+```eval "$(your-cli-tool --completion-script-zsh)"```
+
+
 # Motivation
 This is mostly a tool to help me explore the APIs of various services that I intend to use, and interactively test the APIs I create for work. Thus if there is anything missing it is because I have not had a need for it yet.  If you find this tool useful, great.  Issues and Pull Requests welcome.
