@@ -24,10 +24,10 @@ func (r *Response) hook() error {
 		return nil
 	}
 
-	if luaState == nil {
-		luaState = lua.NewState()
+	L, err := initLua()
+	if err != nil {
+		return err
 	}
-	L := luaState
 
 	r.ranHook = true
 
@@ -103,14 +103,11 @@ func (r *Request) dataHook() error {
 		return nil
 	}
 
-	if luaState == nil {
-		luaState = lua.NewState()
+	L, err := initLua()
+	if err != nil {
+		return err
 	}
-	L := luaState
 
-	if err := L.DoString(luahelpers.JSONLua); err != nil {
-		return ErrHook{Context: "loading json helper", Err: err}
-	}
 	L.SetGlobal("data", lua.LString(r.Data))
 	if err := L.DoString(r.RequestDataHook); err != nil {
 		return ErrHook{Context: "perform request data hook code", Err: err}
@@ -124,14 +121,11 @@ func (r *Request) hook() error {
 		return nil
 	}
 
-	if luaState == nil {
-		luaState = lua.NewState()
+	L, err := initLua()
+	if err != nil {
+		return err
 	}
-	L := luaState
 
-	if err := L.DoString(luahelpers.JSONLua); err != nil {
-		return ErrHook{Context: "loading json helper", Err: err}
-	}
 	t := L.NewTable()
 	t.RawSetString("path", lua.LString(r.URL.Path))
 	t.RawSetString("data", lua.LString(r.Data))
@@ -187,4 +181,14 @@ func stringSliceToLua(L *lua.LState, s []string) *lua.LTable {
 		v.Append(lua.LString(s[i]))
 	}
 	return v
+}
+
+func initLua() (*lua.LState, error) {
+	if luaState == nil {
+		luaState = lua.NewState()
+		if err := luaState.DoString(luahelpers.JSONLua); err != nil {
+			return nil, ErrHook{Context: "loading json helper", Err: err}
+		}
+	}
+	return luaState, nil
 }
