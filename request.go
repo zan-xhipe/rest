@@ -25,6 +25,8 @@ type Request struct {
 	NoQueries bool
 	NoHeaders bool
 
+	RequestDataHook string
+
 	Alias string
 
 	URL url.URL
@@ -105,11 +107,16 @@ func (r *Request) retry(req *http.Request) (*http.Response, error) {
 // Prepare the http request.  This will substitute all the parameters,
 // addd all the headers and query parameters
 func (r *Request) Prepare() (*http.Request, error) {
+	r.RequestDataHook = r.Settings.RequestDataHook.String
+
 	// prepare the url
 	r.URL = r.Settings.URL()
 	params := paramReplacer(r.Settings.Parameters)
 
 	r.URL.Path = path.Join(r.Settings.BasePath.String, params.Replace(r.Path))
+	if err := r.dataHook(); err != nil {
+		return nil, err
+	}
 	r.Data = params.Replace(r.Data)
 
 	if !r.NoQueries {

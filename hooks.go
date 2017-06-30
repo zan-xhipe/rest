@@ -93,3 +93,21 @@ func (r *Response) hook() error {
 	r.display = []byte(t.RawGetString("body").String())
 	return nil
 }
+
+func (r *Request) dataHook() error {
+	if r.RequestDataHook == "" {
+		return nil
+	}
+
+	L := lua.NewState()
+	defer L.Close()
+	if err := L.DoString(luahelpers.JSONLua); err != nil {
+		return ErrHook{Context: "loading json helper", Err: err}
+	}
+	L.SetGlobal("data", lua.LString(r.Data))
+	if err := L.DoString(r.RequestDataHook); err != nil {
+		return ErrHook{Context: "perform request data hook code", Err: err}
+	}
+	r.Data = L.GetGlobal("data").String()
+	return nil
+}
