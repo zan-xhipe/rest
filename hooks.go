@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	lua "github.com/yuin/gopher-lua"
-	"github.com/zan-xhipe/rest/internal/luahelpers"
+	gopherjson "layeh.com/gopher-json"
 )
 
 var luaState *lua.LState
@@ -31,9 +31,6 @@ func (r *Response) hook() error {
 
 	r.ranHook = true
 
-	if err := L.DoString(luahelpers.JSONLua); err != nil {
-		return ErrHook{Context: "loading json helper", Err: err}
-	}
 	t := L.NewTable()
 	t.RawSetString("status", lua.LNumber(r.resp.StatusCode))
 
@@ -186,7 +183,8 @@ func stringSliceToLua(L *lua.LState, s []string) *lua.LTable {
 func initLua() (*lua.LState, error) {
 	if luaState == nil {
 		luaState = lua.NewState()
-		if err := luaState.DoString(luahelpers.JSONLua); err != nil {
+		gopherjson.Preload(luaState)
+		if err := luaState.DoString(`json = require("json")`); err != nil {
 			return nil, ErrHook{Context: "loading json helper", Err: err}
 		}
 	}
