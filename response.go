@@ -20,13 +20,11 @@ type Response struct {
 
 	resp *http.Response
 
-	ResponseHook   string
-	PreFilterHook  string
-	Filter         string
-	PostFilterHook string
-	Pretty         bool
-	PrettyIndent   string
-	SetParameters  map[string]string
+	ResponseHook  string
+	Filter        string
+	Pretty        bool
+	PrettyIndent  string
+	SetParameters map[string]string
 
 	verbose int
 }
@@ -37,9 +35,7 @@ func (r *Response) Load(resp *http.Response, s Settings) error {
 	r.ResponseHook = s.ResponseHook.String
 	r.Pretty = s.Pretty.Bool
 	r.PrettyIndent = s.PrettyIndent.String
-	r.PreFilterHook = s.PreFilterHook.String
 	r.Filter = s.Filter.String
-	r.PostFilterHook = s.PostFilterHook.String
 	r.SetParameters = s.SetParameters
 
 	switch r.verbose {
@@ -115,22 +111,11 @@ func (r *Response) Prepare() error {
 }
 
 func (r *Response) filter() error {
-	pre, err := hook(r.PreFilterHook, string(r.display))
+	var err error
+	r.display, err = filter(r.display, r.Filter, r.Pretty, r.PrettyIndent)
 	if err != nil {
 		return err
 	}
-
-	filtered, err := filter([]byte(pre), r.Filter, r.Pretty, r.PrettyIndent)
-	if err != nil {
-		return err
-	}
-
-	post, err := hook(r.PostFilterHook, string(filtered))
-	if err != nil {
-		return err
-	}
-
-	r.display = []byte(post)
 
 	return nil
 }

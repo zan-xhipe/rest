@@ -36,9 +36,7 @@ var (
 		Filter:        sql.NullString{String: "", Valid: true},
 		SetParameters: make(map[string]string),
 
-		ResponseHook:   sql.NullString{String: "", Valid: true},
-		PreFilterHook:  sql.NullString{String: "", Valid: true},
-		PostFilterHook: sql.NullString{String: "", Valid: true},
+		ResponseHook: sql.NullString{String: "", Valid: true},
 
 		Retries:            sql.NullInt64{Int64: 2, Valid: true},
 		RetryDelay:         NullDuration{Duration: 100000000, Valid: true},
@@ -68,9 +66,7 @@ type Settings struct {
 	SetParameters map[string]string
 
 	// hooks
-	ResponseHook   sql.NullString
-	PreFilterHook  sql.NullString
-	PostFilterHook sql.NullString
+	ResponseHook sql.NullString
 
 	Retries            sql.NullInt64
 	RetryDelay         NullDuration
@@ -106,8 +102,6 @@ func (s *Settings) Merge(other Settings) {
 	mergeMap(s.SetParameters, other.SetParameters)
 
 	mergeString(&s.ResponseHook, other.ResponseHook)
-	mergeString(&s.PreFilterHook, other.PreFilterHook)
-	mergeString(&s.PostFilterHook, other.PostFilterHook)
 
 	mergeInt(&s.Retries, other.Retries)
 	mergeDuration(&s.RetryDelay, other.RetryDelay)
@@ -203,8 +197,6 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause, hide bool) {
 	mapFlag("set-parameter", "takes the form 'parameter.path=filter-expression' The parameter.path is a period separated path to the bucket where the parameter must be set.  filter-expression is a JMESPath expression that will be used to determine what the parameter is set to.  If the filter returns nothing, then the parameter is unset", &s.SetParameters)
 
 	stringFlag("response-hook", "run lua script on response, happens before filtering", "", &s.ResponseHook)
-	stringFlag("pre-filter-hook", "run lua script before filtering response, only happens if the response is filtered", "", &s.PreFilterHook)
-	stringFlag("post-filter-hook", "run lua script after filtering response, only happens if the response is filtered", "", &s.PostFilterHook)
 
 	intFlag("retries", "how many times to retry the command if it fails", "", &s.Retries)
 	durationFlag("retry-delay", "how long to wait between retries, accepts a duration", df.RetryDelay.Duration, &s.RetryDelay)
@@ -273,14 +265,6 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
-	if err := writeString(b, "output.pre-filter-hook", s.PreFilterHook); err != nil {
-		return err
-	}
-
-	if err := writeString(b, "output.post-filter-hook", s.PostFilterHook); err != nil {
-		return err
-	}
-
 	if err := writeInt(b, "retry.retries", s.Retries); err != nil {
 		return err
 	}
@@ -316,8 +300,6 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	s.Filter = readString(b, "output.filter")
 	bucketMap(b.Bucket([]byte("output.set-parameters")), &s.SetParameters)
 	s.ResponseHook = readString(b, "output.response-hook")
-	s.PreFilterHook = readString(b, "output.pre-filter-hook")
-	s.PostFilterHook = readString(b, "output.post-filter-hook")
 	s.Retries = readInt(b, "retry.retries")
 	s.RetryDelay = readDuration(b, "retry.delay")
 	s.ExponentialBackoff = readBool(b, "retry.exponential-backoff")
