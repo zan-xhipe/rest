@@ -2,7 +2,7 @@ package main
 
 import (
 	lua "github.com/yuin/gopher-lua"
-	"github.com/zan-xhipe/rest/internal/jsonlua"
+	"github.com/zan-xhipe/rest/internal/luahelpers"
 )
 
 // hook allows you to execute lua code on the response, comes with a json library
@@ -15,7 +15,7 @@ func hook(code, response string) (string, error) {
 	L := lua.NewState()
 	defer L.Close()
 
-	if err := L.DoString(jsonlua.JSONLua); err != nil {
+	if err := L.DoString(luahelpers.JSONLua); err != nil {
 		return response, err
 	}
 	L.SetGlobal("response", lua.LString(response))

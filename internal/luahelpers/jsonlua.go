@@ -1,4 +1,4 @@
-package jsonlua
+package luahelpers
 
 // from https://github.com/rxi/json.lua with slight modification
 // the plan is to replace this with a module written wit gopher-lua
