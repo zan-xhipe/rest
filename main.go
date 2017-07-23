@@ -114,6 +114,10 @@ func Do(command string) {
 	resp, err := request.Perform()
 	if err != nil {
 		log.Println("error making request:", err)
+		if resp != nil {
+			log.Println(resp.Body)
+			resp.Body.Close()
+		}
 		os.Exit(1)
 	}
 
