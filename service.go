@@ -132,8 +132,7 @@ func listServices() error {
 func hintServices() []string {
 	hints := make([]string, 0)
 
-	db, err := bolt.Open(dbFile, 0600, nil)
-	if err != nil {
+	if err := db.Open(); err != nil {
 		// no hints to provide
 		return nil
 	}

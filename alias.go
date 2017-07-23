@@ -43,9 +43,7 @@ func addAliases() {
 }
 
 func setAliases() error {
-	var err error
-	db, err = bolt.Open(dbFile, 0600, nil)
-	if err != nil {
+	if err := db.Open(); err != nil {
 		return err
 	}
 	defer db.Close()

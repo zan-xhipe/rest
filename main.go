@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/boltdb/bolt"
-	homedir "github.com/mitchellh/go-homedir"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -17,20 +16,13 @@ var (
 
 	verbLevel int
 
-	db     *bolt.DB
-	dbFile string
+	db = &DB{}
 
 	request  Request
 	response Response
 )
 
 func init() {
-	dir, err := homedir.Dir()
-	if err != nil {
-		panic(err)
-	}
-	dbFile = fmt.Sprintf("%s/%s", dir, ".rest.db")
-
 	kingpin.Version(versionNumber)
 	kingpin.Flag("verbose", "Verbose mode").Short('v').CounterVar(&verbLevel)
 	kingpin.UsageTemplate(usageTemplate)
@@ -42,9 +34,7 @@ func init() {
 func main() {
 	command := kingpin.Parse()
 
-	var err error
-	db, err = bolt.Open(dbFile, 0600, nil)
-	if err != nil {
+	if err := db.Open(); err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
