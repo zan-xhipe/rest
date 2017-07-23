@@ -186,9 +186,11 @@ func (r *Request) Prepare() (*http.Request, error) {
 // MakeServiceBucket creates the bucket for the service
 func (r *Request) MakeServiceBucket(tx *bolt.Tx) (*bolt.Bucket, error) {
 	if r.Service == "" {
-		info := tx.Bucket([]byte("info"))
-		current := info.Get([]byte("current"))
-		r.Service = string(current)
+		var err error
+		r.Service, err = db.CurrentService(tx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	sb, err := tx.CreateBucketIfNotExists([]byte("services"))

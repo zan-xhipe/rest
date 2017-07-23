@@ -26,3 +26,12 @@ func (db *DB) Open() error {
 
 	return nil
 }
+
+func (db *DB) CurrentService(tx *bolt.Tx) (string, error) {
+	info := tx.Bucket([]byte("info"))
+	if info == nil {
+		return "", ErrMalformedDB{Bucket: "info"}
+	}
+
+	return string(info.Get([]byte("current"))), nil
+}

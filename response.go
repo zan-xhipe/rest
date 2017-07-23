@@ -125,7 +125,10 @@ func (r *Response) filter() error {
 
 func (r *Response) setParameters() error {
 	return db.Update(func(tx *bolt.Tx) error {
-		current := string(tx.Bucket([]byte("info")).Get([]byte("current")))
+		current, err := db.CurrentService(tx)
+		if err != nil {
+			return err
+		}
 
 		for param, filt := range r.SetParameters {
 			result, err := filter(r.Raw, filt, r.Pretty, r.PrettyIndent)

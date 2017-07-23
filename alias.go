@@ -51,13 +51,8 @@ func setAliases() error {
 	return db.View(func(tx *bolt.Tx) error {
 		// if the services haven't been initialised there will be nothing here, so all
 		// aliases should be ignored and failure to find a particular bucket is safe.
-		info := tx.Bucket([]byte("info"))
-		if info == nil {
-			return nil
-		}
-
-		current := info.Get([]byte("current"))
-		if current == nil {
+		current, err := db.CurrentService(tx)
+		if err != nil {
 			return nil
 		}
 
@@ -66,7 +61,7 @@ func setAliases() error {
 			return nil
 		}
 
-		sb := services.Bucket(current)
+		sb := services.Bucket([]byte(current))
 		if sb == nil {
 			return nil
 		}

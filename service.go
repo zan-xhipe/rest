@@ -109,12 +109,10 @@ func listServices() error {
 			return ErrMalformedDB{Bucket: "services"}
 		}
 
-		info := tx.Bucket([]byte("info"))
-		if info == nil {
-			return ErrMalformedDB{Bucket: "info"}
+		current, err := db.CurrentService(tx)
+		if err != nil {
+			return err
 		}
-
-		current := string(info.Get([]byte("current")))
 
 		return b.ForEach(func(key, _ []byte) error {
 			currentIndicator := " "
