@@ -4,12 +4,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/boltdb/bolt"
 )
@@ -45,6 +48,8 @@ var (
 		ExponentialBackoff: sql.NullBool{Bool: true, Valid: true},
 		RetryJitter:        sql.NullBool{Bool: true, Valid: true},
 	}
+
+	yamlFile *string
 )
 
 type Settings struct {
@@ -76,6 +81,255 @@ type Settings struct {
 	RetryDelay         NullDuration
 	ExponentialBackoff sql.NullBool
 	RetryJitter        sql.NullBool
+}
+
+type YAMLSettings struct {
+	Settings YAMLServiceSettings `yaml:",inline"`
+	Aliases  map[string]struct {
+		Settings    YAMLServiceSettings `yaml:",inline"`
+		Description *string             `yaml:"description,omitempty"`
+		Path        string              `yaml:"path"`
+		Method      string              `yaml:"method"`
+	} `yaml:"aliases"`
+	Paths map[string]struct {
+		Settings YAMLServiceSettings            `yaml:",inline"`
+		Methods  map[string]YAMLServiceSettings `yaml:",inline"`
+	} `yaml:"paths"`
+}
+
+type YAMLServiceSettings struct {
+	Scheme      *string           `yaml:"scheme,omitempty"`
+	Host        *string           `yaml:"host,omitempty"`
+	Port        *int              `yaml:"port,omitempty"`
+	BasePath    *string           `yaml:"base-path,omitempty"`
+	Headers     map[string]string `yaml:"headers,omitempty"`
+	Queries     map[string]string `yaml:"queries,omitempty"`
+	Username    *string           `yaml:"username,omitempty"`
+	Password    *string           `yaml:"password,omitempty"`
+	Parameters  map[string]string `yaml:"parameters,omitempty"`
+	DataHook    *string           `yaml:"data-hook,omitempty"`
+	RequestHook *string           `yaml:"request-hook,omitempty"`
+
+	Output *struct {
+		Pretty              *bool             `yaml:"pretty,omitempty"`
+		Indent              *string           `yaml:"indent,omitempty"`
+		Filter              *string           `yaml:"filter,omitempty"`
+		Hook                *string           `yaml:"hook,omitempty"`
+		SetFilterParameters map[string]string `yaml:"set-filter-parameters,omitempty"`
+		SetLuaParameters    map[string]string `yaml:"set-lua-parameters,omitempty"`
+	} `yaml:"output,omitempty"`
+
+	Retry *struct {
+		Retries            *int           `yaml:"retries,omitempty"`
+		Delay              *time.Duration `yaml:"delay,omitempty"`
+		ExponentialBackoff *bool          `yaml:"exponential-backoff,omitempty"`
+		Jitter             *bool          `yaml:"jitter,omitempty"`
+	} `yaml:"retry,omitempty"`
+}
+
+func WriteYAMLSettings(filename *string, db *DB, r *Request) error {
+	yamlSettings, err := LoadYAMLSettings(*yamlFile)
+	if err != nil {
+		return err
+	}
+
+	return yamlSettings.Write(db, &request)
+}
+
+func LoadYAMLSettings(filename string) (*YAMLSettings, error) {
+	buf, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	var s YAMLSettings
+
+	if err := yaml.Unmarshal(buf, &s); err != nil {
+		return nil, err
+	}
+
+	return &s, nil
+}
+
+func (s *YAMLSettings) Write(db *DB, r *Request) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		info, services, err := db.Init(tx)
+		if err != nil {
+			return err
+		}
+
+		name := r.Service
+
+		// reading yaml completely resets the service, so just delete and recreate it
+		if err := services.DeleteBucket([]byte(name)); err != nil && err != bolt.ErrBucketNotFound {
+			return err
+		}
+		sb, err := services.CreateBucket([]byte(name))
+		if err != nil {
+			return err
+		}
+
+		if err := s.Settings.Write(sb); err != nil {
+			return err
+		}
+
+		// write aliases
+		if s.Aliases != nil {
+			a, err := sb.CreateBucket([]byte("aliases"))
+			if err != nil {
+				return err
+			}
+
+			for k, v := range s.Aliases {
+				b, err := a.CreateBucket([]byte(k))
+				if err != nil {
+					return err
+				}
+
+				if v.Description != nil {
+					if err := b.Put([]byte("description"), []byte(*v.Description)); err != nil {
+						return err
+					}
+				}
+
+				if err := b.Put([]byte("path"), []byte(v.Path)); err != nil {
+					return err
+				}
+
+				if err := b.Put([]byte("method"), []byte(v.Method)); err != nil {
+					return err
+				}
+
+				if err := v.Settings.Write(b); err != nil {
+					return err
+				}
+			}
+
+		}
+
+		// write path/methods
+		for k, v := range s.Paths {
+			b, err := sb.CreateBucket([]byte(k))
+			if err != nil {
+				return err
+			}
+
+			if err := v.Settings.Write(b); err != nil {
+				return err
+			}
+
+			for key, value := range v.Methods {
+				m, err := b.CreateBucket([]byte(key))
+				if err != nil {
+					return err
+				}
+
+				if err := value.Write(m); err != nil {
+					return err
+				}
+			}
+
+		}
+
+		// if there are no current service, set this one as current
+		// this needs to happen last so that we don't set it if something goes wrong during creation
+		if err := db.SetCurrentIfNotExists(info, name); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func (s *YAMLServiceSettings) Write(b *bolt.Bucket) error {
+	if err := write(b, "scheme", s.Scheme); err != nil {
+		return err
+	}
+
+	if err := write(b, "host", s.Host); err != nil {
+		return err
+	}
+
+	if err := write(b, "port", s.Port); err != nil {
+		return err
+	}
+
+	if err := write(b, "base-path", s.BasePath); err != nil {
+		return err
+	}
+
+	if err := writeMap(b, "headers", s.Headers); err != nil {
+		return err
+	}
+
+	if err := writeMap(b, "queries", s.Queries); err != nil {
+		return err
+	}
+
+	if err := write(b, "username", s.Username); err != nil {
+		return err
+	}
+
+	if err := write(b, "password", s.Password); err != nil {
+		return err
+	}
+
+	if err := writeMap(b, "parameters", s.Parameters); err != nil {
+		return err
+	}
+
+	if err := write(b, "request-data-hook", s.DataHook); err != nil {
+		return err
+	}
+
+	if err := write(b, "request-hook", s.RequestHook); err != nil {
+		return err
+	}
+
+	if s.Output != nil {
+		if err := write(b, "output.pretty", s.Output.Pretty); err != nil {
+			return err
+		}
+
+		if err := write(b, "output.pretty-indent", s.Output.Indent); err != nil {
+			return err
+		}
+
+		if err := write(b, "output.filter", s.Output.Filter); err != nil {
+			return err
+		}
+
+		if err := writeMap(b, "output.set-parameters", s.Output.SetFilterParameters); err != nil {
+			return err
+		}
+
+		if err := writeMap(b, "output.set-lua-parameters", s.Output.SetLuaParameters); err != nil {
+			return err
+		}
+
+		if err := write(b, "output.response-hook", s.Output.Hook); err != nil {
+			return err
+		}
+	}
+
+	if s.Retry != nil {
+		if err := write(b, "retry.retries", s.Retry.Retries); err != nil {
+			return err
+		}
+
+		if err := write(b, "retry.exponential-backoff", s.Retry.ExponentialBackoff); err != nil {
+			return err
+		}
+
+		if err := write(b, "retry.delay", s.Retry.Delay); err != nil {
+			return err
+		}
+
+		if err := write(b, "retry.jitter", s.Retry.Jitter); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // NewSettings returns a initialised settings struct
@@ -185,7 +439,7 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause, hide bool) {
 	stringFlag("scheme", "scheme used to access the service", df.Scheme.String, &s.Scheme)
 	stringFlag("host", "hostname for the service", df.Host.String, &s.Host)
 	intFlag("port", "port to access the service  on", strconv.Itoa(int(df.Port.Int64)), &s.Port)
-	stringFlag("base-path", "base path to use with service", "", &s.BasePath)
+	stringFlag("base-path", "base path to use th service", "", &s.BasePath)
 
 	mapFlag("header", "set header for request", &s.Headers)
 	mapFlag("parameter", "set parameter for request", &s.Parameters)
@@ -210,6 +464,10 @@ func (s *Settings) Flags(cmd *kingpin.CmdClause, hide bool) {
 	durationFlag("retry-delay", "how long to wait between retries, accepts a duration", df.RetryDelay.Duration, &s.RetryDelay)
 	boolFlag("exponential-backoff", "wether retries should exponentially backoff, uses the retry delay", df.ExponentialBackoff.Bool, &s.ExponentialBackoff)
 	boolFlag("retry-jitter", "adds jitter to retry delay", df.RetryJitter.Bool, &s.RetryJitter)
+}
+
+func (s *Settings) YAMLFlag(cmd *kingpin.CmdClause) {
+	yamlFile = cmd.Flag("yaml", "load settings from yaml file").String()
 }
 
 // Write settings to the database
@@ -340,13 +598,21 @@ func LoadSettings(b *bolt.Bucket) Settings {
 	return s
 }
 
-func write(b *bolt.Bucket, key, value string) error {
+func write(b *bolt.Bucket, key string, value interface{}) error {
+	if value == nil || reflect.ValueOf(value).IsNil() {
+		return nil
+	}
+
 	var err error
+	v := fmt.Sprint(value)
+	if r := reflect.ValueOf(value); r.Kind() == reflect.Ptr {
+		v = fmt.Sprint(r.Elem())
+	}
 
 	k := strings.Split(key, ".")
 	for i := range k {
 		if i == len(k)-1 {
-			return b.Put([]byte(k[len(k)-1]), []byte(value))
+			return b.Put([]byte(k[len(k)-1]), []byte(v))
 		}
 
 		b, err = b.CreateBucketIfNotExists([]byte(k[i]))
@@ -355,7 +621,7 @@ func write(b *bolt.Bucket, key, value string) error {
 		}
 	}
 
-	return fmt.Errorf("didn't put value %s into %s", value, key)
+	return fmt.Errorf("didn't put value %s into %s", v, key)
 }
 
 func writeString(b *bolt.Bucket, key string, value sql.NullString) error {
@@ -363,7 +629,7 @@ func writeString(b *bolt.Bucket, key string, value sql.NullString) error {
 		return nil
 	}
 
-	return write(b, key, value.String)
+	return write(b, key, &value.String)
 }
 
 func writeInt(b *bolt.Bucket, key string, value sql.NullInt64) error {
@@ -371,7 +637,7 @@ func writeInt(b *bolt.Bucket, key string, value sql.NullInt64) error {
 		return nil
 	}
 
-	return write(b, key, strconv.Itoa(int(value.Int64)))
+	return write(b, key, &value.Int64)
 }
 
 func writeBool(b *bolt.Bucket, key string, value sql.NullBool) error {
@@ -379,7 +645,7 @@ func writeBool(b *bolt.Bucket, key string, value sql.NullBool) error {
 		return nil
 	}
 
-	return write(b, key, fmt.Sprint(value.Bool))
+	return write(b, key, &value.Bool)
 }
 
 func writeMap(b *bolt.Bucket, key string, data map[string]string) error {

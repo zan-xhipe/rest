@@ -19,9 +19,11 @@ func init() {
 	set.Arg("request", "only apply settings when performing specified request type on path").StringVar(&request.Method)
 
 	settings.Flags(set, false)
+	settings.YAMLFlag(set)
 
 	initSrv.Arg("service", "initialise service").Required().StringVar(&request.Service)
 	settings.Flags(initSrv, false)
+	settings.YAMLFlag(initSrv)
 
 	remSrv.Arg("service", "remove service").Required().StringVar(&request.Service)
 
@@ -37,6 +39,12 @@ func init() {
 }
 
 func initService() error {
+	if yamlFile != nil && *yamlFile != "" {
+		// ignore other settings when passing a yaml file
+		return WriteYAMLSettings(yamlFile, db, &request)
+	}
+
+	// parse flags normally
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := request.MakeServiceBucket(tx)
 		if err != nil {
@@ -154,6 +162,11 @@ func hintServices() []string {
 }
 
 func setValue() error {
+	if yamlFile != nil && *yamlFile != "" {
+		// ignore other settings when passing a yaml file
+		return WriteYAMLSettings(yamlFile, db, &request)
+	}
+
 	var err error
 	switch {
 	case request.Method != "":
