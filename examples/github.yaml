@@ -1,0 +1,29 @@
+scheme: https
+host: api.github.com
+port: 443
+headers:
+  Accept: application/vnd.github.v3+json
+  Authorization: token :authtoken
+output:
+  pretty: true
+  indent: '	'
+retry:
+  retries: 2
+  delay: 100ms
+  exponential-backoff: true
+  jitter: true
+aliases:
+  self:
+    description: Show information about yourself
+    path: user
+    method: get
+  stars:
+    path: repos/:user/:repo/stargazers
+    method: get
+    output:
+      hook: 't=json.decode(response.body);c=0;for _ in pairs(t) do c=c+1 end;response.body=c'
+  stargazers:
+    path: repos/:user/:repo/stargazers
+    method: get
+    output:
+      filter: '[*].login'
