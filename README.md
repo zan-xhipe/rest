@@ -144,8 +144,18 @@ Any request that could not be performed, or returns a 5XX status code will be re
 Because rest is intended to be used alongside other command line programs the HTTP response code returned by the service is mapped to a return value.  Any 200 response is mapped to 0, any 300 is mapped 3, 400 to 4, and 500 to 5. Errors resulting from bad input from the cli or errors in the service database return 1.
 
 # Example
+	There are example configurations for some services in the examples/ directory.  To load these call ```rest service init <service> --yaml examples/<service>.yaml```  This will load all the settings from the file into the local database.  If you want to reload the example file just call it again.  Some of the examples will require you to set some parameters to work properly
 ## Github
 Github requires that you provide the accept header for the version of the API. ```$GITHUB_AUTH_TOKEN``` is a developer token.  We store your Github usrename as the ```user``` parameter, it is called 'login' by Github.
+
+You can load the github service using ```rest service init github --yaml examples/github.yaml```  You then need to call.
+
+```rest service use github
+rest service set --parameter "authtoken=$GITHUB_AUTH_TOKEN" \
+	--parameter --user=<github-username> \
+	--repo=<default-repo>```
+
+Below is an example of how to set up the github service without using the provided yaml file.
 
 Note the quotes when setting the authorization token, if we don't provide this it will split the header on the space and you will end up creating a path setting named after your token with a Authorization header that only contains ```token```.
 
