@@ -278,7 +278,7 @@ func (s *YAMLServiceSettings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
-	if err := write(b, "request-data-hook", s.DataHook); err != nil {
+	if err := write(b, "data-hook", s.DataHook); err != nil {
 		return err
 	}
 
@@ -291,7 +291,7 @@ func (s *YAMLServiceSettings) Write(b *bolt.Bucket) error {
 			return err
 		}
 
-		if err := write(b, "output.pretty-indent", s.Output.Indent); err != nil {
+		if err := write(b, "output.indent", s.Output.Indent); err != nil {
 			return err
 		}
 
@@ -299,7 +299,7 @@ func (s *YAMLServiceSettings) Write(b *bolt.Bucket) error {
 			return err
 		}
 
-		if err := writeMap(b, "output.set-parameters", s.Output.SetFilterParameters); err != nil {
+		if err := writeMap(b, "output.set-filter-parameters", s.Output.SetFilterParameters); err != nil {
 			return err
 		}
 
@@ -515,7 +515,7 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
-	if err := writeString(b, "output.pretty-indent", s.PrettyIndent); err != nil {
+	if err := writeString(b, "output.indent", s.PrettyIndent); err != nil {
 		return err
 	}
 
@@ -523,7 +523,7 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
-	if err := writeMap(b, "output.set-parameters", s.SetParameters); err != nil {
+	if err := writeMap(b, "output.set-filter-parameters", s.SetParameters); err != nil {
 		return err
 	}
 
@@ -531,7 +531,7 @@ func (s Settings) Write(b *bolt.Bucket) error {
 		return err
 	}
 
-	if err := writeString(b, "request-data-hook", s.RequestDataHook); err != nil {
+	if err := writeString(b, "request-hook", s.RequestDataHook); err != nil {
 		return err
 	}
 
@@ -570,11 +570,11 @@ func (s *Settings) Read(b *bolt.Bucket) {
 	s.Username = readString(b, "username")
 	s.Password = readString(b, "password")
 	s.Pretty = readBool(b, "output.pretty")
-	s.PrettyIndent = readString(b, "output.pretty-indent")
+	s.PrettyIndent = readString(b, "output.indent")
 	s.Filter = readString(b, "output.filter")
-	bucketMap(b.Bucket([]byte("output.set-parameters")), &s.SetParameters)
+	bucketMap(b.Bucket([]byte("output.set-filter-parameters")), &s.SetParameters)
 	s.ResponseHook = readString(b, "output.response-hook")
-	s.RequestDataHook = readString(b, "request-data-hook")
+	s.RequestDataHook = readString(b, "data-hook")
 	s.RequestHook = readString(b, "request-hook")
 
 	s.Retries = readInt(b, "retry.retries")
