@@ -30,6 +30,9 @@ func addAliases() {
 	action.Flag("description", "a short description of the alias, will be used in generated help documentation").
 		StringVar(&aliasDescription)
 
+	action.Arg("data", "data to be sent with the request").
+		StringVar(&request.Data)
+
 	settings.Flags(action, false)
 
 	aliasParams = make(map[string]map[string]*string)
@@ -181,6 +184,12 @@ func addAlias() error {
 			}
 		}
 
+		if request.Data != "" {
+			if err := a.Put([]byte("data"), []byte(request.Data)); err != nil {
+				return err
+			}
+		}
+
 		if err := settings.Write(a); err != nil {
 			return err
 		}
@@ -209,9 +218,11 @@ func Perform(name string) {
 
 		method := string(a.Get([]byte("method")))
 		path := string(a.Get([]byte("path")))
+		data := string(a.Get([]byte("data")))
 
 		request.Method = method
 		request.Path = path
+		request.Data = data
 
 		// get parameters from alias specific flags
 		for param := range aliasParams[name] {
