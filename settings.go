@@ -187,16 +187,16 @@ func (s *YAMLSettings) Write(db *DB, r *Request) error {
 				}
 
 				if v.Description != nil {
-					if err := b.Put([]byte("description"), []byte(*v.Description)); err != nil {
+					if err := setString(b, "description", *v.Description); err != nil {
 						return err
 					}
 				}
 
-				if err := b.Put([]byte("path"), []byte(v.Path)); err != nil {
+				if err := setString(b, "path", v.Path); err != nil {
 					return err
 				}
 
-				if err := b.Put([]byte("method"), []byte(v.Method)); err != nil {
+				if err := setString(b, "method", v.Method); err != nil {
 					return err
 				}
 
