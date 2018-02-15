@@ -30,6 +30,27 @@ func getBucket(tx *bolt.Tx, path string) *bolt.Bucket {
 	return b
 }
 
+func getBucketFromBucket(bucket *bolt.Bucket, path string) *bolt.Bucket {
+	p := strings.Split(path, ".")
+	if len(p) < 1 {
+		return nil
+	}
+
+	b := bucket.Bucket([]byte(p[0]))
+	if b == nil {
+		return nil
+	}
+
+	for _, v := range p[1:] {
+		b = b.Bucket([]byte(v))
+		if b == nil {
+			return nil
+		}
+	}
+
+	return b
+}
+
 func unsetBucket(b *bolt.Bucket, key string) error {
 	p := strings.Split(key, ".")
 	if len(p) < 1 {
