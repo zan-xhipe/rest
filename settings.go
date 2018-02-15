@@ -193,17 +193,19 @@ func (s *YAMLSettings) Write(db *DB, r *Request) error {
 					return err
 				}
 
-				if v.Description != nil {
-					if err := setString(b, "description", *v.Description); err != nil {
-						return err
-					}
-				}
-
-				if err := setString(b, "path", v.Path); err != nil {
+				if err := setString(b, "description", v.Description); err != nil {
 					return err
 				}
 
-				if err := setString(b, "method", v.Method); err != nil {
+				if err := setString(b, "path", &v.Path); err != nil {
+					return err
+				}
+
+				if err := setString(b, "method", &v.Method); err != nil {
+					return err
+				}
+
+				if err := setString(b, "data", v.Data); err != nil {
 					return err
 				}
 

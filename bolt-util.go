@@ -111,8 +111,12 @@ func bucketMap(b *bolt.Bucket, m *map[string]string) {
 	*m = temp
 }
 
-func setString(b *bolt.Bucket, key, value string) error {
-	return b.Put([]byte(key), []byte(value))
+func setString(b *bolt.Bucket, key string, value *string) error {
+	if value != nil {
+		return b.Put([]byte(key), []byte(*value))
+	}
+
+	return nil
 }
 
 func setInt(b *bolt.Bucket, key string, value int) error {
