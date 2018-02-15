@@ -97,24 +97,16 @@ func setAliases() error {
 
 			// turn path parameters into flags
 			path := strings.Split(string(b.Get([]byte("path"))), "/")
-			for _, p := range path {
-				if p[0] == ':' {
-					// param := p[1:]
-
-					addAliasParam(a, string(k), p[1:])
-					// desc := fmt.Sprintf("set :%s parameter", param)
-					// aliasParams[string(k)][param] = a.Flag(param, desc).String()
-				}
+			for _, p := range paramFinder(path) {
+				addAliasParam(a, string(k), p)
 			}
 
 			// turn header parameters into flags
 			if h := b.Bucket([]byte("headers")); h != nil {
 				h.ForEach(func(_, value []byte) error {
 					v := strings.Fields(string(value))
-					for i := range v {
-						if v[i][0] == ':' {
-							addAliasParam(a, string(k), v[i][1:])
-						}
+					for _, p := range paramFinder(v) {
+						addAliasParam(a, string(k), p)
 					}
 
 					return nil
@@ -124,8 +116,8 @@ func setAliases() error {
 			// turn query parameters into flags
 			if q := b.Bucket([]byte("queries")); q != nil {
 				q.ForEach(func(_, value []byte) error {
-					if value[0] == ':' {
-						addAliasParam(a, string(k), string(value[1:]))
+					if p := findParam(string(value)); p != "" {
+						addAliasParam(a, string(k), p)
 					}
 
 					return nil
