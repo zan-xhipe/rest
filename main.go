@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	versionNumber = "0.7"
+	versionNumber = "0.8"
 
 	verbLevel int
 
