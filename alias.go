@@ -30,6 +30,9 @@ func addAliases() {
 	action.Flag("description", "a short description of the alias, will be used in generated help documentation").
 		StringVar(&aliasDescription)
 
+	action.Arg("data", "data to be sent with the request").
+		StringVar(&request.Data)
+
 	settings.Flags(action, false)
 
 	aliasParams = make(map[string]map[string]*string)
