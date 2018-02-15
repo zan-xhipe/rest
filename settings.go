@@ -84,17 +84,20 @@ type Settings struct {
 }
 
 type YAMLSettings struct {
-	Settings YAMLServiceSettings `yaml:",inline"`
-	Aliases  map[string]struct {
-		Settings    YAMLServiceSettings `yaml:",inline"`
-		Description *string             `yaml:"description,omitempty"`
-		Path        string              `yaml:"path"`
-		Method      string              `yaml:"method"`
-	} `yaml:"aliases"`
-	Paths map[string]struct {
+	Settings YAMLServiceSettings          `yaml:",inline"`
+	Aliases  map[string]YAMLAliasSettings `yaml:"aliases"`
+	Paths    map[string]struct {
 		Settings YAMLServiceSettings            `yaml:",inline"`
 		Methods  map[string]YAMLServiceSettings `yaml:",inline"`
 	} `yaml:"paths"`
+}
+
+type YAMLAliasSettings struct {
+	Settings    YAMLServiceSettings `yaml:",inline"`
+	Description *string             `yaml:"description,omitempty"`
+	Path        string              `yaml:"path"`
+	Method      string              `yaml:"method"`
+	Data        *string             `yaml:"data,omitempty"`
 }
 
 type YAMLServiceSettings struct {
@@ -110,21 +113,25 @@ type YAMLServiceSettings struct {
 	DataHook    *string           `yaml:"data-hook,omitempty"`
 	RequestHook *string           `yaml:"request-hook,omitempty"`
 
-	Output *struct {
-		Pretty              *bool             `yaml:"pretty,omitempty"`
-		Indent              *string           `yaml:"indent,omitempty"`
-		Filter              *string           `yaml:"filter,omitempty"`
-		Hook                *string           `yaml:"hook,omitempty"`
-		SetFilterParameters map[string]string `yaml:"set-filter-parameters,omitempty"`
-		SetLuaParameters    map[string]string `yaml:"set-lua-parameters,omitempty"`
-	} `yaml:"output,omitempty"`
+	Output *YAMLOutputSettings `yaml:"output,omitempty"`
 
-	Retry *struct {
-		Retries            *int           `yaml:"retries,omitempty"`
-		Delay              *time.Duration `yaml:"delay,omitempty"`
-		ExponentialBackoff *bool          `yaml:"exponential-backoff,omitempty"`
-		Jitter             *bool          `yaml:"jitter,omitempty"`
-	} `yaml:"retry,omitempty"`
+	Retry *YAMLRetrySettings `yaml:"retry,omitempty"`
+}
+
+type YAMLOutputSettings struct {
+	Pretty              *bool             `yaml:"pretty,omitempty"`
+	Indent              *string           `yaml:"indent,omitempty"`
+	Filter              *string           `yaml:"filter,omitempty"`
+	Hook                *string           `yaml:"hook,omitempty"`
+	SetFilterParameters map[string]string `yaml:"set-filter-parameters,omitempty"`
+	SetLuaParameters    map[string]string `yaml:"set-lua-parameters,omitempty"`
+}
+
+type YAMLRetrySettings struct {
+	Retries            *int           `yaml:"retries,omitempty"`
+	Delay              *time.Duration `yaml:"delay,omitempty"`
+	ExponentialBackoff *bool          `yaml:"exponential-backoff,omitempty"`
+	Jitter             *bool          `yaml:"jitter,omitempty"`
 }
 
 func WriteYAMLSettings(filename *string, db *DB, r *Request) error {
@@ -241,6 +248,46 @@ func (s *YAMLSettings) Write(db *DB, r *Request) error {
 	})
 }
 
+func (s *YAMLSettings) Read(b *bolt.Bucket) error {
+	if err := s.Settings.Read(b); err != nil {
+		return err
+	}
+
+	if aliasBucket := b.Bucket([]byte("aliases")); aliasBucket != nil {
+		s.Aliases = make(map[string]YAMLAliasSettings)
+
+		aliasBucket.ForEach(func(key, _ []byte) error {
+			as := YAMLAliasSettings{}
+
+			as.Settings.Read(aliasBucket)
+
+			if buf := read(aliasBucket, "description"); buf != nil {
+				desc := string(buf)
+				as.Description = &desc
+			}
+
+			if buf := read(aliasBucket, "path"); buf != nil {
+				as.Path = string(buf)
+			}
+
+			if buf := read(aliasBucket, "method"); buf != nil {
+				as.Method = string(buf)
+			}
+
+			if buf := read(aliasBucket, "data"); buf != nil {
+				data := string(buf)
+				as.Data = &data
+			}
+
+			s.Aliases[string(key)] = as
+
+			return nil
+		})
+	}
+
+	return nil
+}
+
 func (s *YAMLServiceSettings) Write(b *bolt.Bucket) error {
 	if err := write(b, "scheme", s.Scheme); err != nil {
 		return err
@@ -329,6 +376,84 @@ func (s *YAMLServiceSettings) Write(b *bolt.Bucket) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (s *YAMLServiceSettings) Read(b *bolt.Bucket) error {
+	readString := func(key string, value *string) {
+		if buf := read(b, key); buf != nil {
+			b := string(buf)
+			value = &b
+		}
+	}
+
+	readInt := func(key string, value *int) {
+		if buf := read(b, key); buf != nil {
+			p, err := strconv.Atoi(string(buf))
+			if err != nil {
+				value = nil
+			}
+
+			value = &p
+		}
+	}
+
+	readBool := func(key string, value *bool) {
+		if buf := read(b, key); buf != nil {
+			p, err := strconv.ParseBool(string(buf))
+			if err != nil {
+				value = nil
+			}
+
+			value = &p
+		}
+	}
+
+	readDuration := func(key string, value *time.Duration) {
+		if buf := read(b, key); buf != nil {
+			d, err := time.ParseDuration(string(buf))
+			if err != nil {
+				value = nil
+			}
+
+			value = &d
+		}
+	}
+
+	readMap := func(key string, value map[string]string) {
+		bucketMap(getBucketFromBucket(b, key), &value)
+	}
+
+	readString("scheme", s.Scheme)
+	readString("host", s.Host)
+	readInt("port", s.Port)
+	readString("base-path", s.BasePath)
+	readMap("headers", s.Headers)
+	readMap("queries", s.Queries)
+	readString("username", s.Username)
+	readString("password", s.Password)
+	readMap("parameters", s.Parameters)
+	readString("data-hook", s.DataHook)
+	readString("request-hook", s.RequestHook)
+
+	if b.Bucket([]byte("output")) != nil {
+		s.Output = &YAMLOutputSettings{}
+		readBool("output.pretty", s.Output.Pretty)
+		readString("output.indent", s.Output.Indent)
+		readString("output.filter", s.Output.Filter)
+		readString("output.response-hook", s.Output.Hook)
+		readMap("output.set-filter-parameters", s.Output.SetFilterParameters)
+		readMap("output.set-lua-parameters", s.Output.SetLuaParameters)
+	}
+
+	if b.Bucket([]byte("retry")) != nil {
+		s.Retry = &YAMLRetrySettings{}
+		readInt("retry.retries", s.Retry.Retries)
+		readBool("retry.exponential-backoff", s.Retry.ExponentialBackoff)
+		readDuration("retry.delay", s.Retry.Delay)
+		readBool("retry.jitter", s.Retry.Jitter)
+	}
+
 	return nil
 }
 
