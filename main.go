@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/boltdb/bolt"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -182,13 +181,4 @@ func usedFlag(b *bool) func(*kingpin.ParseContext) error {
 		*b = true
 		return nil
 	}
-}
-
-func paramReplacer(parameters map[string]string) *strings.Replacer {
-	rep := make([]string, 0, len(parameters))
-	for key, value := range parameters {
-		rep = append(rep, ":"+key)
-		rep = append(rep, value)
-	}
-	return strings.NewReplacer(rep...)
 }
