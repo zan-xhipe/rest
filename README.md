@@ -163,8 +163,9 @@ You can load the github service using ```rest service init github --yaml example
 
 ```
 rest service use github
-rest service set --parameter "authtoken=$GITHUB_AUTH_TOKEN" \
+rest service set --parameter authtoken='$GITHUB_AUTH_TOKEN' \
 	--parameter --user=<github-username> \
+	--repo=<default-repo>
 ```
 
 Below is an example of how to set up the github service without using the provided yaml file.
@@ -178,7 +179,7 @@ rest service init github \
 	--host api.github.com \
 	--header Accept=application/vnd.github.v3+json
 rest service use github
-rest service set --header Authorization="token $GITHUB_AUTH_TOKEN"
+rest service set --header Authorization='token $GITHUB_AUTH_TOKEN'
 rest get user --pretty --set-parameter user=login
 ```
 

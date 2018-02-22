@@ -3,7 +3,7 @@ host: api.github.com
 port: 443
 headers:
   Accept: application/vnd.github.v3+json
-  Authorization: token :authtoken
+  Authorization: token $GITHUB_AUTH_TOKEN
 output:
   pretty: true
   indent: '	'
