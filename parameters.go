@@ -1,8 +1,16 @@
 package main
 
 import (
+	"os"
 	"strings"
 )
+
+func replacer(parameters map[string]string) func(string) string {
+	params := paramReplacer(parameters)
+	return func(input string) string {
+		return os.ExpandEnv(params.Replace(input))
+	}
+}
 
 func paramReplacer(parameters map[string]string) *strings.Replacer {
 	rep := make([]string, 0, len(parameters))

@@ -127,18 +127,18 @@ func (r *Request) Prepare() (*http.Request, error) {
 
 	// prepare the url
 	r.URL = r.Settings.URL()
-	params := paramReplacer(r.Settings.Parameters)
+	replace := replacer(r.Settings.Parameters)
 
-	r.URL.Path = path.Join(r.Settings.BasePath.String, params.Replace(r.Path))
+	r.URL.Path = path.Join(r.Settings.BasePath.String, replace(r.Path))
 	if err := r.dataHook(); err != nil {
 		return nil, err
 	}
-	r.Data = params.Replace(r.Data)
+	r.Data = replace(r.Data)
 
 	if !r.NoQueries {
 		q := r.URL.Query()
 		for key, value := range r.Settings.Queries {
-			v := params.Replace(value)
+			v := replace(value)
 			if v[0] != ':' {
 				q.Set(key, v)
 			}
@@ -168,12 +168,12 @@ func (r *Request) Prepare() (*http.Request, error) {
 
 	if r.Settings.Username.Valid && r.Settings.Password.Valid &&
 		r.Settings.Username.String != "" && r.Settings.Password.String != "" {
-		req.SetBasicAuth(r.Settings.Username.String, r.Settings.Password.String)
+		req.SetBasicAuth(replace(r.Settings.Username.String), replace(r.Settings.Password.String))
 	}
 
 	if !r.NoHeaders {
 		for key, value := range r.Settings.Headers {
-			v := params.Replace(value)
+			v := replace(value)
 			if v[0] != ':' {
 				req.Header.Set(key, v)
 			}

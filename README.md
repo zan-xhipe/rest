@@ -11,7 +11,9 @@ It is also designed to interact nicely with other command line tools, as such is
 If you want to do more complex processing than json filtering you can run lua hooks at various points in the request/response process, these hooks can alter the data you send and display in arbitrary ways.
 
 to get it run
-```go get -u github.com/zan-xhipe/rest```
+```
+go get -u github.com/zan-xhipe/rest
+```
 
 # Usage
 To use a service you first have to initialise it.  This lets you provide the host name, port, scheme, and headers to use when accessing the service.
@@ -57,6 +59,13 @@ You can store parameters with other service settings.
 ```
 rest service set --parameter userID=1
 rest get users/:userID
+```
+
+You can also store environment variables in parameters, these will be expanded when the request is made. If you don't quote the envar when you set it then it will expand when you set it instead of when you call it.  This can be very useful for setting secrets and not have them appear in the config. 
+```
+rest service set --parameter token='$SECRET_TOKEN'
+rest service set --password='$PASSWORD'
+rest service set --header Authorization='Token $TOKEN'
 ```
 
 Parameters also work in headers and URL query items
