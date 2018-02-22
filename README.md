@@ -147,7 +147,9 @@ This allows basic pagination with services that return an offset iterator.  Note
 # Retries
 Any request that could not be performed, or returns a 5XX status code will be retried twice with exponential backoff and jitter.  By default two retries are attempted, with 100ms exponential backoff and jitter.  To change this use.
 
-```rest service set --retries=10 --retry-delay=500ms --no-exponential-backoff --no-retry-jitter```
+```
+rest service set --retries=10 --retry-delay=500ms --no-exponential-backoff --no-retry-jitter
+```
 
 # Return Value
 Because rest is intended to be used alongside other command line programs the HTTP response code returned by the service is mapped to a return value.  Any 200 response is mapped to 0, any 300 is mapped 3, 400 to 4, and 500 to 5. Errors resulting from bad input from the cli or errors in the service database return 1.
@@ -159,10 +161,11 @@ Github requires that you provide the accept header for the version of the API. `
 
 You can load the github service using ```rest service init github --yaml examples/github.yaml```  You then need to call.
 
-```rest service use github
+```
+rest service use github
 rest service set --parameter "authtoken=$GITHUB_AUTH_TOKEN" \
 	--parameter --user=<github-username> \
-	--repo=<default-repo>```
+```
 
 Below is an example of how to set up the github service without using the provided yaml file.
 
