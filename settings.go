@@ -340,13 +340,21 @@ func LoadSettings(b *bolt.Bucket) Settings {
 	return s
 }
 
-func write(b *bolt.Bucket, key, value string) error {
+func write(b *bolt.Bucket, key string, value interface{}) error {
+	if value == nil || reflect.ValueOf(value).IsNil() {
+		return nil
+	}
+
 	var err error
+	v := fmt.Sprint(value)
+	if r := reflect.ValueOf(value); r.Kind() == reflect.Ptr {
+		v = fmt.Sprint(r.Elem())
+	}
 
 	k := strings.Split(key, ".")
 	for i := range k {
 		if i == len(k)-1 {
-			return b.Put([]byte(k[len(k)-1]), []byte(value))
+			return b.Put([]byte(k[len(k)-1]), []byte(v))
 		}
 
 		b, err = b.CreateBucketIfNotExists([]byte(k[i]))
@@ -355,7 +363,7 @@ func write(b *bolt.Bucket, key, value string) error {
 		}
 	}
 
-	return fmt.Errorf("didn't put value %s into %s", value, key)
+	return fmt.Errorf("didn't put value %s into %s", v, key)
 }
 
 func writeString(b *bolt.Bucket, key string, value sql.NullString) error {
@@ -363,7 +371,7 @@ func writeString(b *bolt.Bucket, key string, value sql.NullString) error {
 		return nil
 	}
 
-	return write(b, key, value.String)
+	return write(b, key, &value.String)
 }
 
 func writeInt(b *bolt.Bucket, key string, value sql.NullInt64) error {
@@ -371,7 +379,7 @@ func writeInt(b *bolt.Bucket, key string, value sql.NullInt64) error {
 		return nil
 	}
 
-	return write(b, key, strconv.Itoa(int(value.Int64)))
+	return write(b, key, &value.Int64)
 }
 
 func writeBool(b *bolt.Bucket, key string, value sql.NullBool) error {
@@ -379,7 +387,7 @@ func writeBool(b *bolt.Bucket, key string, value sql.NullBool) error {
 		return nil
 	}
 
-	return write(b, key, fmt.Sprint(value.Bool))
+	return write(b, key, &value.Bool)
 }
 
 func writeMap(b *bolt.Bucket, key string, data map[string]string) error {
@@ -402,7 +410,8 @@ func writeDuration(b *bolt.Bucket, key string, value NullDuration) error {
 		return nil
 	}
 
-	return write(b, key, fmt.Sprint(value.Duration))
+	v := fmt.Sprint(value.Duration)
+	return write(b, key, &v)
 }
 
 func read(b *bolt.Bucket, key string) []byte {
