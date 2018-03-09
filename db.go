@@ -35,3 +35,30 @@ func (db *DB) CurrentService(tx *bolt.Tx) (string, error) {
 
 	return string(info.Get([]byte("current"))), nil
 }
+
+func (db *DB) Init(tx *bolt.Tx) (info, services *bolt.Bucket, err error) {
+	services, err = tx.CreateBucketIfNotExists([]byte("services"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	info, err = tx.CreateBucketIfNotExists([]byte("info"))
+	if err != nil {
+		return nil, nil, err
+	}
+	return info, services, nil
+}
+
+func (db *DB) SetCurrentIfNotExists(info *bolt.Bucket, name string) error {
+	if info.Get([]byte("current")) == nil {
+		if err := info.Put([]byte("current"), []byte(name)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (db *DB) SetCurrent(info *bolt.Bucket, name string) error {
+	return info.Put([]byte("current"), []byte(name))
+}
