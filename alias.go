@@ -103,25 +103,29 @@ func setAliases() error {
 
 			// turn header parameters into flags
 			if h := b.Bucket([]byte("headers")); h != nil {
-				h.ForEach(func(_, value []byte) error {
+				if err := h.ForEach(func(_, value []byte) error {
 					v := strings.Fields(string(value))
 					for _, p := range paramFinder(v) {
 						addAliasParam(a, string(k), p)
 					}
 
 					return nil
-				})
+				}); err != nil {
+					return err
+				}
 			}
 
 			// turn query parameters into flags
 			if q := b.Bucket([]byte("queries")); q != nil {
-				q.ForEach(func(_, value []byte) error {
+				if err := q.ForEach(func(_, value []byte) error {
 					if p := findParam(string(value)); p != "" {
 						addAliasParam(a, string(k), p)
 					}
 
 					return nil
-				})
+				}); err != nil {
+					return err
+				}
 			}
 
 			return nil
