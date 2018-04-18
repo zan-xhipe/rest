@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"strings"
+	"unicode"
 )
 
 func replacer(parameters map[string]string) func(string) string {
@@ -52,4 +53,29 @@ func paramFinder(input []string) []string {
 	}
 
 	return params
+}
+
+func splitFunc(r rune) bool {
+	if unicode.IsSpace(r) {
+		return true
+	}
+
+	return unicode.IsSpace(r) ||
+		r == ',' ||
+		r == '"' ||
+		r == '{' ||
+		r == '}' ||
+		r == '[' ||
+		r == ']'
+}
+
+func dataSpliter(input string) []string {
+	tmp := strings.FieldsFunc(input, splitFunc)
+	result := make([]string, 0, len(tmp))
+	for i := range tmp {
+		if tmp[i] != ":" {
+			result = append(result, tmp[i])
+		}
+	}
+	return result
 }

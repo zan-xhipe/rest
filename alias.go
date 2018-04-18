@@ -128,6 +128,11 @@ func setAliases() error {
 				}
 			}
 
+			data := dataSpliter(string(b.Get([]byte("data"))))
+			for _, p := range paramFinder(data) {
+				addAliasParam(a, string(k), p)
+			}
+
 			return nil
 		})
 	})
