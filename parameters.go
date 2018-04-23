@@ -31,6 +31,10 @@ func paramReplacer(parameters map[string]string) *strings.Replacer {
 func findParam(input string) string {
 	out := ""
 
+	if len(input) == 0 {
+		return out
+	}
+
 	if input[0] == ':' {
 		out = input[1:]
 
