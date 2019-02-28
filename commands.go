@@ -36,13 +36,6 @@ func init() {
 
 // requestFlags apply to all the basic request types
 func requestFlags(cmd *kingpin.CmdClause, hide bool) {
-	s := cmd.Flag("service", "the service to use")
-	if hide {
-		s.Hidden()
-
-	}
-	s.StringVar(&request.Service)
-
 	nh := cmd.Flag("no-headers", "ignore stored service headers")
 	if hide {
 		nh.Hidden()

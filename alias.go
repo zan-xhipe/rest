@@ -16,7 +16,7 @@ var (
 	aliasParams      map[string]map[string]*string
 )
 
-func addAliases() {
+func addAliases(service string) {
 	action.Arg("name", "name for the alias action").
 		Required().
 		StringVar(&request.Alias)
@@ -39,13 +39,13 @@ func addAliases() {
 
 	// parse aliases and make them part of the command, aliases will show up on help,
 	// aliases can be called directly as a subcommand of 'rest'
-	if err := setAliases(); err != nil {
+	if err := setAliases(service); err != nil {
 		panic(err)
 	}
 
 }
 
-func setAliases() error {
+func setAliases(service string) error {
 	if err := db.Open(); err != nil {
 		return err
 	}
@@ -54,9 +54,14 @@ func setAliases() error {
 	return db.View(func(tx *bolt.Tx) error {
 		// if the services haven't been initialised there will be nothing here, so all
 		// aliases should be ignored and failure to find a particular bucket is safe.
-		current, err := db.CurrentService(tx)
-		if err != nil {
-			return nil
+
+		current := service
+		if current == "" {
+			var err error
+			current, err = db.CurrentService(tx)
+			if err != nil {
+				return nil
+			}
 		}
 
 		services := tx.Bucket([]byte("services"))

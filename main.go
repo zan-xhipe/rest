@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -19,19 +20,33 @@ var (
 
 	request  Request
 	response Response
+
+	service string
 )
 
 func init() {
 	kingpin.Version(versionNumber)
 	kingpin.Flag("verbose", "Verbose mode").Short('v').CounterVar(&verbLevel)
+	kingpin.Flag("service", "The service to use").StringVar(&request.Service)
 	kingpin.UsageTemplate(usageTemplate)
 	log.SetFlags(0)
 
-	addAliases()
+	// we have to parse the service flag twice so that we can change which aliases
+	// are loaded in when parsing the full command
+	serviceSelection := flag.NewFlagSet("", flag.ContinueOnError)
+	serviceSelection.StringVar(&request.Service, "service", "", "Which service to use for the current command")
+	// We ignore errors here as we are only trying to parse one flag, we only care about parse errors from kingpin
+	_ = serviceSelection.Parse(os.Args[1:])
+
+	addAliases(request.Service)
 }
 
 func main() {
 	command := kingpin.Parse()
+
+	if verbLevel > 1 && request.Service != "" {
+		log.Println("using ", request.Service)
+	}
 
 	if err := db.Open(); err != nil {
 		log.Println(err)
