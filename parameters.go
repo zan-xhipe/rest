@@ -21,7 +21,7 @@ func paramReplacer(parameters map[string]string) *strings.Replacer {
 		rep = append(rep, value)
 
 		// bracket parameter
-		rep = append(rep, "{"+key+"}")
+		rep = append(rep, "{{"+key+"}}")
 		rep = append(rep, value)
 	}
 
@@ -40,8 +40,8 @@ func findParam(input string) string {
 
 	}
 
-	if input[0] == '{' && input[len(input)-1] == '}' {
-		out = input[1 : len(input)-1]
+	if input[0] == '{' && input[1] == '{' && input[len(input)-1] == '}' && input[len(input)-2] == '}' {
+		out = input[1 : len(input)-2]
 	}
 
 	return out
