@@ -37,9 +37,9 @@ func displayServiceKey(b *bolt.Bucket, service, key string) {
 	if b == nil {
 		return
 	}
-	if v := b.Get([]byte(key)); v == nil {
-		printBucket(b.Bucket([]byte(key)), 0)
-	} else {
-		fmt.Println(string(v))
+
+	if asBucket := getBucketFromBucket(b, key); asBucket != nil {
+		printBucket(asBucket, 0)
+		return
 	}
 }
