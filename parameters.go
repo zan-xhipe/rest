@@ -60,17 +60,14 @@ func paramFinder(input []string) []string {
 }
 
 func splitFunc(r rune) bool {
-	if unicode.IsSpace(r) {
-		return true
-	}
-
 	return unicode.IsSpace(r) ||
 		r == ',' ||
 		r == '"' ||
 		r == '{' ||
 		r == '}' ||
 		r == '[' ||
-		r == ']'
+		r == ']' ||
+		r == '/'
 }
 
 func dataSpliter(input string) []string {
