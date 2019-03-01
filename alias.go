@@ -45,24 +45,18 @@ func addAliases(service string) {
 
 }
 
-func setAliases(service string) error {
+func setAliases(current string) error {
+	// no aliases without a service
+	if current == "" {
+		return nil
+	}
+
 	if err := db.Open(); err != nil {
 		return err
 	}
 	defer db.Close()
 
 	return db.View(func(tx *bolt.Tx) error {
-		// if the services haven't been initialised there will be nothing here, so all
-		// aliases should be ignored and failure to find a particular bucket is safe.
-
-		current := service
-		if current == "" {
-			var err error
-			current, err = db.CurrentService(tx)
-			if err != nil {
-				return nil
-			}
-		}
 
 		services := tx.Bucket([]byte("services"))
 		if services == nil {

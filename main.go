@@ -31,12 +31,7 @@ func init() {
 	kingpin.UsageTemplate(usageTemplate)
 	log.SetFlags(0)
 
-	// we have to parse the service flag twice so that we can change which aliases
-	// are loaded in when parsing the full command
-	serviceSelection := flag.NewFlagSet("", flag.ContinueOnError)
-	serviceSelection.StringVar(&request.Service, "service", "", "Which service to use for the current command")
-	// We ignore errors here as we are only trying to parse one flag, we only care about parse errors from kingpin
-	_ = serviceSelection.Parse(os.Args[1:])
+	request.Service = currentService()
 
 	addAliases(request.Service)
 }
@@ -134,6 +129,44 @@ func Do(command string) {
 	fmt.Println(response)
 
 	os.Exit(response.ExitCode())
+}
+
+// currentService returns the currently selected service, it first checks if the --service command line flag
+// has been set, after that it checks in the local db for the current service, if no service is selected returns
+// a empty string
+func currentService() string {
+	service := ""
+	// we have to parse the service flag twice so that we can change which aliases
+	// are loaded in when parsing the full command
+	serviceSelection := flag.NewFlagSet("", flag.ContinueOnError)
+	serviceSelection.StringVar(&service, "service", "", "Which service to use for the current command")
+	// We ignore errors here as we are only trying to parse one flag, we only care about parse errors from kingpin
+	_ = serviceSelection.Parse(os.Args[1:])
+
+	if service == "" {
+		if err := db.Open(); err != nil {
+			log.Fatal(err)
+		}
+		defer func() {
+			if err := db.Close(); err != nil {
+				log.Fatal(err)
+			}
+		}()
+
+		// if the services haven't been initialised there will be nothing here
+		err := db.View(func(tx *bolt.Tx) error {
+			current, err := db.CurrentService(tx)
+			if err != nil {
+				return nil
+			}
+			service = current
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return service
 }
 
 func useService() error {
