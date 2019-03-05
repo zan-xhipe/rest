@@ -2,8 +2,10 @@ package main
 
 import (
 	"os"
+	"regexp"
 	"strings"
-	"unicode"
+
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 func replacer(parameters map[string]string) func(string) string {
@@ -28,55 +30,32 @@ func paramReplacer(parameters map[string]string) *strings.Replacer {
 	return strings.NewReplacer(rep...)
 }
 
-func findParam(input string) string {
-	out := ""
-
-	if len(input) == 0 {
-		return out
+func addAliasParamsFromString(cmd *kingpin.CmdClause, name, str string) {
+	for p, _ := range findParams(str) {
+		addAliasParam(cmd, name, p)
 	}
-
-	if input[0] == ':' {
-		out = input[1:]
-
-	}
-
-	if input[0] == '{' && input[1] == '{' && input[len(input)-1] == '}' && input[len(input)-2] == '}' {
-		out = input[1 : len(input)-2]
-	}
-
-	return out
-
 }
 
-func paramFinder(input []string) []string {
-	params := make([]string, 0)
-	for _, p := range input {
-		if param := findParam(p); param != "" {
-			params = append(params, param)
+func findParams(input string) map[string]struct{} {
+	re := regexp.MustCompile(`{{([[:word:]|-]*)}}|:[[:word:]]*`)
+	matched := re.FindAllStringSubmatch(input, -1)
+	params := make(map[string]struct{})
+	for _, match := range matched {
+		name := match[0]
+		switch {
+		case strings.HasPrefix(name, ":"):
+			name = strings.TrimPrefix(name, ":")
+
+		case strings.HasPrefix(name, "{{") && strings.HasSuffix(name, "}}"):
+			name = strings.TrimPrefix(name, "{{")
+			name = strings.TrimSuffix(name, "}}")
+
 		}
+		if name == "" {
+			continue
+		}
+		params[name] = struct{}{}
 	}
 
 	return params
-}
-
-func splitFunc(r rune) bool {
-	return unicode.IsSpace(r) ||
-		r == ',' ||
-		r == '"' ||
-		r == '{' ||
-		r == '}' ||
-		r == '[' ||
-		r == ']' ||
-		r == '/'
-}
-
-func dataSpliter(input string) []string {
-	tmp := strings.FieldsFunc(input, splitFunc)
-	result := make([]string, 0, len(tmp))
-	for i := range tmp {
-		if tmp[i] != ":" {
-			result = append(result, tmp[i])
-		}
-	}
-	return result
 }

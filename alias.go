@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -95,16 +94,15 @@ func setAliases(current string) error {
 			aliasParams[string(k)] = make(map[string]*string)
 
 			// turn path parameters into flags
-			path := strings.Split(string(b.Get([]byte("path"))), "/")
-			for _, p := range paramFinder(path) {
+			path := string(b.Get([]byte("path")))
+			for p, _ := range findParams(path) {
 				addAliasParam(a, string(k), p)
 			}
 
 			// turn header parameters into flags
 			if h := b.Bucket([]byte("headers")); h != nil {
 				if err := h.ForEach(func(_, value []byte) error {
-					v := strings.Fields(string(value))
-					for _, p := range paramFinder(v) {
+					for p, _ := range findParams(string(value)) {
 						addAliasParam(a, string(k), p)
 					}
 
@@ -117,7 +115,7 @@ func setAliases(current string) error {
 			// turn query parameters into flags
 			if q := b.Bucket([]byte("queries")); q != nil {
 				if err := q.ForEach(func(_, value []byte) error {
-					if p := findParam(string(value)); p != "" {
+					for p, _ := range findParams(string(value)) {
 						addAliasParam(a, string(k), p)
 					}
 
@@ -127,8 +125,8 @@ func setAliases(current string) error {
 				}
 			}
 
-			data := dataSpliter(string(b.Get([]byte("data"))))
-			for _, p := range paramFinder(data) {
+			data := string(b.Get([]byte("data")))
+			for p, _ := range findParams(data) {
 				addAliasParam(a, string(k), p)
 			}
 
